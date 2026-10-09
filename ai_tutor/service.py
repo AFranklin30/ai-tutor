@@ -58,7 +58,50 @@ class MessageService:
                         )
                     if not repo.eligible_coursework(student_id, context):
                         raise ApplicationError(403, "forbidden", "This action is not permitted.")
-                    message_id = repo.insert_message(session_id, content, trace_id)
+                    sequence = repo.allocate_sequence(session_id)
+                    message_id = repo.insert_message(session_id, content, trace_id, sequence)
+                    repo.insert_processing_job(message_id)
                     repo.associate_key(student_id, key, message_id)
                     result = Admission(message_id, "PENDING", True)
+        return result
+
+    def read_status(self, student_id, session_id, message_id):
+        with self.sessions.begin() as session:
+            row = MessageRepository(session).polling_snapshot(student_id, session_id, message_id)
+            if row is None or not row["is_active"]:
+                raise unauthenticated()
+            if row["role"] != "STUDENT":
+                raise ApplicationError(403, "forbidden", "This action is not permitted.")
+            if row["message_id"] is None:
+                raise not_found()
+            status = row["processing_status"]
+            if (
+                status not in {"PENDING", "PROCESSING", "COMPLETED", "FAILED", "CANCELLED"}
+                or (status == "COMPLETED") != (row["reply_id"] is not None)
+                or (status == "COMPLETED" and not row["reply_content"])
+            ):
+                raise ApplicationError(500, "internal_error", "Unable to read message status.")
+            result = {
+                "student_message_id": message_id,
+                "status": status,
+                "tutor_response": None,
+                "error": None,
+            }
+            if status == "COMPLETED":
+                result["tutor_response"] = {
+                    "tutor_message_id": row["reply_id"],
+                    "content": row["reply_content"],
+                }
+            elif status == "FAILED":
+                result["error"] = {
+                    "code": "tutor_processing_failed",
+                    "message": (
+                        "Your message was saved, but the tutor could not complete a response."
+                    ),
+                }
+            elif status == "CANCELLED":
+                result["error"] = {
+                    "code": "message_processing_cancelled",
+                    "message": "Your message was saved, but processing has stopped.",
+                }
         return result

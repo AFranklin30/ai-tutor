@@ -36,7 +36,7 @@ Approval source: the human request “Synchronize the AI Tutor repository docume
 - Status: APPROVED.
 - Context/problem: Failures and retries must not lose input or multiply side effects.
 - Options considered: The human supplied the approved behavior in decisions 1–12, 23; alternatives were not selected during synchronization.
-- Decision/rationale: Persist input before AI processing and output before return; correlate student/tutor messages; current-state replay with scoped keys and changed-payload 409; explicit retry is separate; single processing ownership and nonduplicated durable effects. Initial successful creation is 201; required dependency terminal failure is student-safe 503.
+- Decision/rationale: Persist input before AI processing and output before return; correlate student/tutor messages; current-state replay with scoped keys and changed-payload 409; explicit retry is separate; single processing ownership and nonduplicated durable effects. Initial successful creation is 201; required dependency terminal failure is student-safe 503. SLICE1-004 subsequently clarifies that successful idempotent replay of stored FAILED is 200; 503 applies when genuine unavailability prevents fulfillment of the current request.
 - Consequences/tradeoffs: Preserve immutable content/attempt/evidence history while processing metadata evolves. Physical concurrency and storage mechanisms remain deferred.
 - Approval evidence: Step 4 human synchronization request, numbered decisions 1–12, 23.
 - Affected contracts: api-contract.md §§1–7; schema.md §§11–12, 14, 20–22; architecture.md §31; ai-runtime.md.
@@ -103,9 +103,33 @@ Approval source: the human request “Synchronize the AI Tutor repository docume
 - Context/problem: Conceptual session, model/tool, public-output, and review flows need explicit responsibility boundaries.
 - Options considered: Human-specified flows; no new implementation alternative selected.
 - Decision/rationale: Preserve Step 1–4 session/replay semantics; validate coursework eligibility; Orchestrator coordinates RAG → Context Builder → model; ToolExecutor mediates actions through services/repositories; tool results feed subsequent reasoning; commit final output before controlled public delivery. Keep the modular monolith/local-first shape.
-- Consequences/tradeoffs: No new microservice/queue/worker requirement. Model and internal tool data do not become public output. The abbreviated Step 5 state-check sequence retains Step 4's historical replay exception.
+- Consequences/tradeoffs: The original Step 5 decision introduced no separate deployment requirement. Approved amendment STEP5-001-A1 now permits one separately deployed PostgreSQL-backed worker without a dedicated queue service. Model and internal tool data do not become public output. The abbreviated Step 5 state-check sequence retains Step 4's historical replay exception.
 - Approval evidence: Human “We have completed Step 5 — Flow” request, flows 1–4, 10–11 and Important boundaries; explicit instruction to preserve Step 1–4.
 - Contracts: architecture.md §31.2; api-contract.md §§2, 11, 13; ai-runtime.md “Approved Step 5 flow detail”; security.md “Step 5 execution and public-response boundary”; evals.md “Step 5 flow verification additions”.
+
+## STEP5-001-A1 — Asynchronous worker, client polling, and session continuity
+
+- Date: 2026-10-08 (America/Chicago).
+- Status: APPROVED.
+- Context/problem: Slice 1 durably admits student messages as PENDING. Slice 2 needs to process that work independently of the admitting HTTP request. The original STEP5-001 and architecture §31.2 did not authorize a separate worker deployment.
+- Decision/rationale:
+  - Permit one separately deployed PostgreSQL-backed background worker for asynchronous tutor response generation. FastAPI and the worker share the modular-monolith application boundaries and PostgreSQL database; this is not decomposition into domain microservices.
+  - PostgreSQL remains the durable source of admitted work, processing state, and committed results. Work must survive API/worker process loss without depending on an in-memory task or external notification.
+  - Separately exclude a dedicated queue service or message broker. Do not introduce Redis, Celery, RabbitMQ, or Kafka. A logical backlog in PostgreSQL is not a dedicated queue service.
+  - POST commits input and its idempotency record before returning the admission response. Background processing starts only after that commit.
+  - Clients initially poll authenticated GET /api/v1/coaching/messages/{message_id} for current status and committed student-safe output; message_id identifies the student message. POST replay remains available for uncertain send outcomes, not normal polling.
+  - Completed learning sessions remain CLOSED to new messages. Students continue through new eligible sessions with minimum relevant authorized prior context. Message COMPLETED does not itself close a session or establish official mastery.
+  - Separate admission from slower processing while retaining durable input and the existing database. This addresses the asynchronous workflow, not a measured capacity bottleneck.
+- Alternatives considered:
+  - Process inside POST: simpler deployment, but couples processing and response delivery to request lifetime.
+  - API-process background task: fewer deployment roles, but execution remains coupled to API lifecycle and still needs durable recovery from PostgreSQL.
+  - Dedicated broker/task platform: additional operational and consistency responsibilities without a demonstrated MVP need.
+  - Repeated POST replay or push delivery for status: retain POST replay for uncertain submission; initially prefer read-only GET polling.
+- Consequences/tradeoffs: Operate and supervise an additional deployment role; coordinate API/worker version compatibility, database access and connection capacity, restart/shutdown behavior, health, backlog, and processing-failure visibility. Polling adds HTTP/database reads and detection latency. PostgreSQL availability and capacity affect admission and processing. No broker infrastructure is added.
+- Preserved guarantees: Input/output commit boundaries, valid-owner finalization, stale-owner rejection, idempotency, existing bounded retry policy, append-only history, authorization, assigned-coursework scope, selected context, and human mastery authority.
+- Open questions: GET wire/error details and polling cadence; physical work discovery/ownership/recovery; deployment supervision and shutdown; any new session-completion trigger or cross-session context policy. Resolve before dependent implementation. No lease, retry, migration, or worker implementation design is approved by this amendment.
+- Approval evidence: Human “approve” response to the reviewable STEP5-001 amendment and ten-document synchronization proposal. This approves documentation synchronization, not runtime implementation.
+- Contracts: requirements.md; architecture.md §§3, 25.1, 28, 31; api-contract.md; schema.md; ai-runtime.md; security.md; evals.md. README.md and architecture-decisions.md summarize this decision.
 
 ## STEP5-002 — Crash recovery and valid-owner finalization
 
@@ -134,9 +158,9 @@ Approval source: the human request “Synchronize the AI Tutor repository docume
 - Date: 2026-10-06 (America/Chicago).
 - Status: APPROVED.
 - Context/problem: Growth may constrain inference, application capacity, database access, or retrieval; speculative distribution would add unnecessary MVP complexity.
-- Options considered: Human-provided evolutionary options: application instances/load balancing, query/index/pagination improvements, safe caching, read replicas/partitioning, extreme-scale sharding, improved vector search, model routing, and later asynchronous processing. None is selected for immediate deployment.
+- Options considered: Human-provided evolutionary options: application instances/load balancing, query/index/pagination improvements, safe caching, read replicas/partitioning, extreme-scale sharding, improved vector search, model routing, and later asynchronous processing. None was selected for immediate deployment by the original Step 6 decision; STEP5-001-A1 subsequently selects the limited worker topology.
 - Decision/rationale: Use Growth → Bottleneck → Solution → Tradeoff. Retain FastAPI modular monolith, PostgreSQL + pgvector, external models, thin model abstraction, small curriculum, and local-first/cloud-deployable posture. Avoid unnecessary permanent-single-instance assumptions. Investigate inference constraints directly; gate meaningful optimizations on behavioral quality evaluation.
-- Consequences/tradeoffs: Infrastructure complexity requires measured justification and approval. No Kubernetes, microservices, queues, replicas, partitioning, sharding, dedicated vector service, routing policy, or cache implementation is approved now. Embeddings remain separate; model/configuration choices stay deferred.
+- Consequences/tradeoffs: Infrastructure complexity requires measured justification and approval. No Kubernetes, microservices, dedicated queue services/brokers, replicas, partitioning, sharding, dedicated vector service, routing policy, or cache implementation is approved now. STEP5-001-A1 selects one separate worker for asynchronous workflow requirements, not speculative scaling; a logical PostgreSQL backlog is not a dedicated queue service. Other scaling options remain measurement-driven. Embeddings remain separate; model/configuration choices stay deferred.
 - Approval evidence: Human “We have completed Step 6 — Scale and Step 7 — Failure” synchronization request, Step 6 and Important preservation/validation instructions.
 - Contracts: requirements.md §22.3; architecture.md §31.3; schema.md §31.2; ai-runtime.md “Step 6 inference and retrieval scale posture”; security.md and evals.md Steps 6–7 sections.
 
@@ -255,3 +279,35 @@ Approval source: the human request “Synchronize the AI Tutor repository docume
 TODO / UNRESOLVED: exact model/provider and embedding model/dimension; curriculum source/unit/objectives and chunking/versioning; session resumability/expiration duration; official mastery vocabulary/transition graph; calibrated progress rubric and numeric release thresholds; remaining production authentication/relationship policy beyond Slice 1; age/privacy/consent/training/accessibility details; future open-practice mode; class/group allocation beyond Slice 1; physical ownership/recovery/action-idempotency design; physical mastery-history/POC-feedback representation; additional review transitions/concurrency rules; remaining wire-level response mappings and production idempotency expiration beyond Slice 1 demo-lifetime retention. See domain documents for scoped details. Deferral is not permission to invent defaults.
 
 Future approved decisions should retain date, context, options, rationale, consequences, approval evidence, and affected contract references. Do not log trivial coding choices as architectural decisions.
+
+## SLICE1-004 — Successful FAILED-message replay remains HTTP 200
+
+- Date: 2026-10-08 (America/Chicago).
+- Status: APPROVED.
+- Context/problem: Broad terminal-processing-failure 503 wording could be mistaken for the HTTP status of a later successful idempotent POST replay, contradicting the approved Slice 1 behavior and existing regression test.
+- Options considered: Return the original processing failure's HTTP status, or distinguish successful replay retrieval from current service unavailability.
+- Decision/rationale: An authorized identical idempotent POST replay returns 200 with the previously accepted message ID and current state, including FAILED. It creates no message, schedules no job, and starts no processing attempt. Reserve 503 for genuine unavailability preventing fulfillment of the current request. New intentional input uses a new key; worker retries do not require a new client key.
+- Consequences/tradeoffs: Clarifies earlier Step 4/7 failure wording without changing authentication, authorization, explicit-retry eligibility, or Slice 1 runtime behavior. It does not approve the remaining Slice 2a schema, worker, or GET response design.
+- Approval evidence: Human request “Choose 200 OK — update the API contract” and explicit request for a FAILED-replay regression test.
+- Contracts: api-contract.md §§3, 5–6; ai-runtime.md durable interaction flow; evals.md deterministic contract tests.
+
+## SLICE2A-001 — Processing persistence, ordered workers, and polling
+
+- Date: 2026-10-08 (America/Chicago).
+- Status: APPROVED.
+- Context/problem: Durable admission needs operational job metadata, strict session ordering, fenced processing, and read-only status delivery without conflicting status authorities.
+- Options considered: Extend messages with all worker fields versus one dedicated job per input; duplicate statuses versus messages as sole authority; skip FAILED versus preserve ordering; external brokers versus existing PostgreSQL; flat versus session-nested polling route.
+- Decision/rationale: Dedicated message_processing_jobs without a status column; messages.processing_status remains authoritative. Approve the Slice 2a design and final three-area clarification: sequence-based session heads, FAILED barriers, one PROCESSING message per session, token/lease fencing, coupled finalization and unique tutor response, closure reasons and CANCELLED, and authenticated nested GET polling. See schema.md §31.6, architecture.md §31.8, api-contract.md polling, and ai-runtime.md Slice 2a for exact contracts.
+- Defaults: Model timeout 30 seconds, lease 45 seconds, heartbeat 10 seconds, claim deadline 90 seconds, maximum two claims per retry generation, two-second retry/recovery backoff, 35-second shutdown grace. No hidden SDK retries; one initial-generation model invocation per claim.
+- Explicit retry clarification: Only known transient model-provider or infrastructure failures may become eligible for future student retry, subject to current authorization, ACTIVE session, retry budgets, and rate limits. Invalid model output, authorization failures, policy violations, invalid requests, and unknown failures are not explicitly retryable. Preserve retry_generation; do not implement a student-facing retry endpoint in Slice 2a.
+- Consequences/tradeoffs: FAILED blocks later messages; permanently nonretryable work requires continuation through a new eligible session. Database triggers enforce committed state shape, not runtime authorization or lease fencing. Exactly-once external model execution is not guaranteed. New schema requires compatible admission before deployment. Legacy acceptance order is deterministic (created_at, id), not reconstructed historical commit order; CLOSED legacy sessions become UNKNOWN and unfinished work is cancelled. Unexpected legacy processing/response history aborts migration for review.
+- Approval evidence: Human “I approve the Slice 2a schema and worker contract” with final explicit-retry policy and six implementation stages. Stage 1 is authorized now; stop for review before Stage 2. Earlier STEP5-001-A1 and SLICE1-004 remain in force.
+- Scope: No broker, RAG, tutor summaries, cross-session memory, or multi-agent orchestration. Stage 1 covers models/migration/constraints/triggers/backfill and PostgreSQL tests only.
+
+- Staged implementation authorization update (2026-10-08): The human accepted Stage 2 for continued development, not deployment, and authorized Stage 3 claiming, leases/heartbeat/deadlines, fencing, retries/recovery/shutdown, authorization checks, and PostgreSQL tests with a deterministic fake. Stop after Stage 3 for review. No production model client, GET endpoint, RAG, dashboard, or explicit student retry endpoint is authorized in this stage. This extends the original staged authorization; it does not change SLICE2A-001 policy.
+
+- Staged implementation continuation (2026-10-08): Human “continue” after the Stage 3 completion report advances the previously authorized sequence to Stage 4 (model-client abstraction and deterministic fake). No provider selection, production model integration, GET endpoint, or deployment is included. This records execution scope, not a new product or architecture decision.
+
+- Staged implementation continuation (2026-10-08): Human “continue” after the Stage 4 report advances the previously authorized sequence to Stage 5, the authenticated read-only status GET. Existing SLICE2A-001 wire, authorization, and consistency contracts apply unchanged. No deployment, production model integration, or explicit retry endpoint is included.
+
+- Stage 6 authorization: Human explicitly requested “Slice 2a — Stage 6: End-to-End Integration and Failure Validation,” real PostgreSQL/deterministic-model testing, and minimal changes for validation or confirmed defects. Stop after Stage 6 for review; no production provider, deployment, new slice, or unapproved endpoint. This records execution scope, not a new design decision.

@@ -18,16 +18,18 @@ Retrieval authorization/context filtering precedes semantic relevance. Prerequis
 1. Validate/authenticate/authorize the operation and protected-resource access.
 2. Resolve an authorized existing send replay before applying new-send ACTIVE checks; return current state/result without processing.
 3. For a new eligible send, commit student input and its user-operation idempotency association before retrieval/model/AI processing.
-4. Start one owned processing run, select context/tools, and perform bounded retrieval/model/tool processing outside the durable-input transaction.
+4. Return the POST admission response after input commit. Independently, the PostgreSQL-backed worker establishes valid ownership and performs bounded retrieval/model/tool processing outside the durable-input transaction.
 5. Validate output and execute only authorized actions. Reuse already successful logical durable effects on retry/recovery.
 6. Commit tutor output, logically coupled state/evidence, and COMPLETED status before returning output. Student input and tutor output are separately correlated messages.
-7. On terminal failure, retain input and mark FAILED. Required dependency failure after bounded eligible recovery uses a student-safe 503; internal failure categories remain distinct from public errors.
+7. On terminal failure, retain input and mark FAILED. A genuine dependency outage preventing fulfillment of the current HTTP request uses a student-safe 503. Successful idempotent POST replay returns 200 even for stored FAILED, without creating input, scheduling work, or starting another attempt (SLICE1-004); internal failure categories remain distinct from public errors.
+
+The numbered flow spans separate admission, background-processing, and GET-delivery operations. Committed output becomes available through authenticated GET; the worker does not send the original POST response. Existing safe failure rules remain in force. SLICE2A-001 defines stored FAILED as HTTP 200 with the safe tutor_processing_failed error in the polling envelope.
 
 Every input is a Message. Only actual coursework problem-solving/reasoning becomes a StudentAttempt, traceable to its source message. Evidence is interaction/message/attempt-attributable and append-only. Contradictions remain preserved. Recovery never duplicates a logical attempt or evidence item. Exact attempt-classification mechanics remain unresolved.
 
 ## Processing, replay, and recovery
 
-Student message processing follows PENDING → PROCESSING → COMPLETED or FAILED. Processing metadata may change; historical content must remain preserved. Only one active run may own a message; stale PROCESSING work must be detectable/recoverable without competing outputs or duplicate durable effects. No lock, lease, queue, worker, or stale threshold is chosen here.
+Student message processing follows PENDING → PROCESSING → COMPLETED or FAILED. Processing metadata may change; historical content must remain preserved. Only one active run may own a message; stale PROCESSING work must be detectable/recoverable without competing outputs or duplicate durable effects. STEP5-001-A1 selects one separately deployed PostgreSQL-backed worker. No dedicated queue service is introduced. SLICE2A-001 now defines physical ownership, lease and recovery for this slice; implementation is staged.
 
 User-operation idempotency scope is authenticated student + operation + key. Same key/same payload returns current PENDING, PROCESSING, COMPLETED result, or FAILED state without processing. Changed payload returns 409 and preserves the original. Explicit retry processes the same FAILED message without creating new input; it may not begin in CLOSED. See api-contract.md §§4–6 for public behavior.
 
@@ -37,7 +39,9 @@ System-action idempotency protects logically identical durable POC/evidence/esca
 
 MVP supports assigned/published coursework only. Enrollment is distinct from eligibility for a specific assignment/problem; allocation mechanics remain deferred.
 
-A student may close their own ACTIVE session: ACTIVE → CLOSED. CLOSED prevents new work. Work already admitted as PENDING/PROCESSING may finish; FAILED work cannot begin a new explicit retry. Authorized historical replay remains available without processing. Start New atomically closes the old ACTIVE session and creates a new ACTIVE session; failure leaves the old session ACTIVE. Authentication lifetime does not define coaching-session resumability.
+A student may close their own ACTIVE session: ACTIVE → CLOSED. CLOSED prevents new work. Work already admitted as PENDING/PROCESSING may finish under NORMAL closure with current authorization; administrative/unknown closure cancels unfinished work under SLICE2A-001; FAILED work cannot begin a new explicit retry. Authorized historical replay remains available without processing. Start New atomically closes the old ACTIVE session and creates a new ACTIVE session; failure leaves the old session ACTIVE. Authentication lifetime does not define coaching-session resumability.
+
+Completed learning sessions stay CLOSED. Further conversation uses a new eligible session with minimum relevant authorized prior context. Do not reopen old sessions, dump unrestricted history into model context, or infer official mastery from message/session completion.
 
 ## Evidence, progress, and human review
 
@@ -80,13 +84,13 @@ RAG retrieves authorized curriculum. Context Builder assembles only relevant pro
 
 Requested actions pass through Orchestrator → ToolExecutor → application/service logic → repository/data access → PostgreSQL. Validate arguments, authorization, authority, state, and durable-action idempotency. Return tool results to the Orchestrator and add them to model context before further reasoning. Do not assume success; response-critical failure cannot produce claims that an action succeeded. The Orchestrator, not the model, owns control and enforces the approved five-step configurable limit.
 
-A valid final response with no further required tool actions passes through services/repository to PostgreSQL. Commit output and logically coupled evidence/state/completion atomically as appropriate before controlled public HTTP delivery via FastAPI and Frontend. If visible to the student, the response already has a durable record.
+A valid final response with no further required tool actions passes through services/repository to PostgreSQL. Commit output and logically coupled evidence/state/completion atomically as appropriate before subsequent delivery through authenticated FastAPI GET and Frontend. The background runtime does not complete the original POST response; all existing validation, tool, authorization, and atomic-finalization requirements remain intact. If visible to the student, the response already has a durable record.
 
 ### Failure, ownership transfer, and replay
 
 Use the approved bounded automatic retry policy for eligible transient failures; do not broaden eligibility. Terminal processing failure transitions PROCESSING → FAILED while preserving committed input and internal failure classification; public errors stay safe. Explicit retry validates the existing FAILED message and transitions it to PROCESSING under valid ownership. It creates no duplicate Message and cannot silently reopen CLOSED.
 
-At most one currently valid owner may finalize a student message. Detect stale/dead ownership; another processor may reclaim it, but the stale former owner must not finalize competing results after transfer. A PROCESSING status alone cannot be trusted forever. Physical ownership/lease/token/lock/queue choices remain deferred.
+At most one currently valid owner may finalize a student message. Detect stale/dead ownership; another processor may reclaim it, but the stale former owner must not finalize competing results after transfer. A PROCESSING status alone cannot be trusted forever. See the approved Slice 2a section for physical ownership/lease/token/lock and work-discovery choices; STEP5-001-A1 excludes a dedicated queue service.
 
 After a crash, resume/restart from the last durable committed state. Uncommitted model output is not authoritative and need not be reconstructed. Prior committed side effects may survive a later turn failure: recognize/reuse them, while unsuccessful/uncommitted effects may be attempted again under approved rules. User-operation replay and durable-action idempotency protect different boundaries.
 
@@ -102,7 +106,7 @@ Interaction → model assessment → validated MasteryEvidence → ProgressServi
 
 Approval: decisions.md STEP6-001; architecture.md §31.3. Measure the bottleneck before changing infrastructure. Investigate model cost/latency/concurrency/provider capacity, model calls per turn, unnecessary loop steps, context/token size, retrieval precision/chunk count, semantically safe caching, and bounded retries/steps. Preserve current limits and selected authorized context.
 
-The thin abstraction permits workload-appropriate models when justified: stronger reasoning models for complex tutoring, cheaper/faster models for simpler tasks when quality evaluations support them. Embeddings remain a separate model. No provider, routing rule, cache, queue, or asynchronous topology is selected. Evaluate meaningful model-routing, context-reduction, retrieval, and inference changes against relevant behavioral quality metrics; do not trade tutoring quality solely for cost.
+The thin abstraction permits workload-appropriate models when justified: stronger reasoning models for complex tutoring, cheaper/faster models for simpler tasks when quality evaluations support them. Embeddings remain a separate model. STEP5-001-A1 selects the separate-worker topology and PostgreSQL durable work source. No provider, routing rule, cache, or dedicated queue service is selected; other scaling choices remain deferred. Evaluate meaningful model-routing, context-reduction, retrieval, and inference changes against relevant behavioral quality metrics; do not trade tutoring quality solely for cost.
 
 Retrieval remains PostgreSQL + pgvector with deterministic authorization/metadata filtering and vector similarity. Relevant scope includes course, grade/subject, unit/lesson, objective, and approved prerequisites; prerequisites do not grant access. Initial curriculum is small. Dedicated vector infrastructure requires measured justification.
 
@@ -153,6 +157,63 @@ Approval: decisions.md STEP10-001. Follow architecture.md §25.1 for correlation
 
 The approved first implementation stops at durable PENDING message admission and authorized replay. It does not invoke this document's retrieval, context, model, orchestration, tool, processing/recovery, or tutor-output flows. See decisions.md SLICE1-001 through SLICE1-003; future runtime guarantees remain contracts for later slices.
 
+## Slice 2a — Approved worker contract (implementation staged)
+
+Approval: SLICE2A-001. Stage 1 implements schema/constraints/backfill; Stage 2 atomically creates unclaimed jobs during new-message admission. Stage 3 implements the worker runner/service/repository and test-only deterministic processors. Stage 4 adds the thin model-client adapter and explicitly injected deterministic fake. Stage 5 implements authenticated read-only GET polling. No live provider exists yet. This section supersedes the corresponding ownership/retry deferrals above.
+
+- claim_next(worker_instance_id) → optional Claim: lock user/session/authorization/head/message/job in approved order; reselect the oldest unresolved head; due PENDING only. Expired PROCESSING is fenced and becomes PENDING with two-second recovery backoff if budget remains, else FAILED. Never skip an unresolved head.
+- renew_lease(claim) → renewed/lost/cancelled: match token + retry_generation + PROCESSING + unexpired lease/deadline and current authorization. Use PostgreSQL clock_timestamp(); extend to min(now+45 seconds, attempt_deadline_at), never revive expired ownership.
+- complete(claim, validated_response) → committed/already-completed/lost/cancelled: reauthorize and fence after locks, then atomically insert the one tutor response and set COMPLETED/terminal job shape. Retain winning token for lost-acknowledgement reconciliation. The locked ownership check is the finalization serialization point, not a wall-clock promise at the instant of COMMIT.
+- record_failure(claim, category) → requeued/failed/lost/cancelled: same fencing; only known transient MODEL_TIMEOUT/MODEL_UNAVAILABLE/MODEL_RATE_LIMITED may automatically requeue within the shared budget. Deterministic invalid output, configuration/policy failures, and unknown processing errors do not automatically retry. Database unavailability cannot truthfully record FAILED until a write commits.
+- cancel(message_id, cause, trusted_authority) → cancelled/already-terminal: authoritative account/enrollment/coursework/closure policy, not client identity or model arguments. Cancel affected unfinished scope without freeing later unauthorized work. Completed output remains history.
+- process_next(processor, stop) claims and commits, invokes at most one initial-generation model call per claim outside transactions, heartbeats independently, then completes or records failure. run(processor, stop) repeats with one active claim per process initially.
+
+Defaults: model timeout 30s; lease 45s; heartbeat every 10s; per-claim deadline 90s; max_attempts=2 per retry generation; retry/recovery backoff 2s. Each claim gets a fresh UUID token and increments lifetime/cycle counts. Require at least 35s lease/deadline remaining before a call. Disable hidden SDK retries. Crash recovery consumes the same budget, even if the crash preceded the call; no nested model/worker retry multiplication. Future multi-step orchestration needs compatible accounting and does not silently change the existing five-step bound.
+
+After heartbeat failure/lost ownership, stop initiating external work, cancel the local request where possible, and reject eventual stale output. A provider may continue after cancellation: exactly-once external execution is not guaranteed. After uncertain final commit, read PostgreSQL before considering further action; never invoke the model just because delivery was lost.
+
+Shutdown: stop claiming; heartbeat during a 35s grace window; then cancel local work and leave lease-expiration recovery. Deployment shutdown does not mark input CANCELLED. Empty poll interval 1s. Database outage backoff 1/2/4/8/15s capped, ±20% jitter. Monitor queue wait/head age, claims/renewals/lease loss, failures/recovery/cancellation, latency, and observed model usage. Log metadata, never raw content, credentials, or claim tokens.
+
+Future explicit retry: only known transient model-provider or infrastructure failures, subject to current authorization, ACTIVE session, retry budgets and rate limits. Invalid output, authorization failures, policy violations, invalid requests and unknown failures are not explicitly retryable. Preserve retry_generation and lifetime count; reset cycle count only in the future authorized workflow. No student-facing retry endpoint is implemented in Slice 2a. Same-key POST replay remains read-only HTTP 200, including FAILED.
+
 ## Deferred decisions
 
-TODO / UNRESOLVED: model/provider; embedding model/dimension; retrieval/chunking/reranking parameters; exact runtime output schemas; detailed grounding/refusal/escalation policy; confidence/transfer/progress thresholds; session resumability duration; additional session/POC states; official mastery vocabulary/transition graph; additional escalation transitions/concurrency rules; physical ownership/recovery/action-idempotency mechanisms; broader retry eligibility; exact non-dependency terminal failure mappings; age policy; privacy/consent/training rules; accessibility; runtime budgets beyond approved defaults. Deferral never authorizes invented defaults.
+TODO / UNRESOLVED: model/provider; embedding model/dimension; retrieval/chunking/reranking parameters; exact runtime output schemas; detailed grounding/refusal/escalation policy; confidence/transfer/progress thresholds; session resumability duration; additional session/POC states; official mastery vocabulary/transition graph; additional escalation transitions/concurrency rules; durable tool-action idempotency mechanisms beyond Slice 2a; future explicit-retry budgets/rate limits; exact non-dependency terminal failure mappings; age policy; privacy/consent/training rules; accessibility; runtime budgets beyond approved defaults. Deferral never authorizes invented defaults.
+
+
+### Stage 3 implementation notes
+
+`processing_service.py` owns claim, renewal, completion, failure, and policy cancellation
+transactions. `worker.py` runs one injected async processor outside those transactions and
+maintains an independent heartbeat task. `cancel(claim)` rechecks persisted policy and live
+ownership; discovery also cancels denied sessions under the user/session locks. No arbitrary
+caller-supplied cancellation cause or administrative API is exposed.
+
+Processor implementations must cooperate with the event loop and validate student-safe
+output before returning text. Current deterministic fakes verify mechanics only; they do not
+establish tutoring quality or production model safety. Production adapter, output policy,
+deployment signal wiring, and telemetry export remain later work. Cancellation can stop
+local consumption but cannot guarantee that a remote provider stops billing/execution.
+
+Discovery reads all unresolved session heads in this controlled MVP to avoid starvation
+behind a fixed prefix of FAILED heads. Candidate reads end before per-session claim
+transactions. Each transaction applies a one-second lock timeout and five-second statement
+timeout; model calls never hold its locks. Larger backlogs may require measured query and
+batching work, without changing session ordering or ownership contracts.
+
+
+### Stage 4 implementation notes
+
+`model_client.py` defines an async `ModelClient.generate(ProcessingInput)` boundary and
+`ModelProcessor` adapter. A call receives only the worker-selected input, never a database
+session, claim token, credentials, tools, or unrestricted student records. The adapter
+invokes the client once, propagates cancellation/failure, and rejects non-string, blank,
+or NUL-containing output as MODEL_INVALID_OUTPUT without modifying valid text.
+This is the existing persistence shape check, not a new semantic validation policy.
+
+`FakeModelClient` requires explicitly supplied synthetic text, returns it deterministically,
+and stores only that configured response and a call counter. It performs no network/database
+access and captures no student input. It is opt-in dependency injection, never a production
+fallback. No automatic model routing or client-internal retries are introduced. Stage 3's
+worker remains the timeout/retry/lease authority. Approved production output policy and a
+provider adapter are still prerequisites for live model integration.

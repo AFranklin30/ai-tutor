@@ -1,5 +1,6 @@
 import hashlib
 import os
+from datetime import datetime, timezone
 from types import SimpleNamespace
 from uuid import uuid4
 
@@ -7,7 +8,7 @@ import pytest
 from alembic import command
 from alembic.config import Config
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, insert, text
+from sqlalchemy import create_engine, insert, text, update
 
 from ai_tutor import models as m
 from ai_tutor.api import create_app
@@ -15,7 +16,7 @@ from ai_tutor.config import Settings
 
 
 @pytest.fixture
-def database():
+def database(request):
     url = os.environ.get("TEST_DATABASE_URL")
     if not url:
         pytest.fail("TEST_DATABASE_URL must point to a disposable PostgreSQL database")
@@ -29,7 +30,7 @@ def database():
     config = Config("alembic.ini")
     with engine.begin() as conn:
         config.attributes["connection"] = conn
-        command.upgrade(config, "head")
+        command.upgrade(config, getattr(request, "param", "head"))
     try:
         yield engine
     finally:
@@ -121,3 +122,40 @@ def seeded(database):
             app=app,
             url=f"/api/v1/coaching/sessions/{ids['session']}/messages",
         )
+
+
+@pytest.fixture
+def mark_message_failed():
+    """Create valid committed failure data for replay tests, not a worker implementation."""
+
+    def mark(conn, message_id):
+        # Follow allowed transitions; deferred triggers inspect the final coupled state.
+        conn.execute(
+            update(m.messages)
+            .where(m.messages.c.id == message_id)
+            .values(processing_status="PROCESSING")
+        )
+        conn.execute(
+            update(m.messages)
+            .where(m.messages.c.id == message_id)
+            .values(processing_status="FAILED")
+        )
+        now = datetime.now(timezone.utc)
+        conn.execute(
+            update(m.message_processing_jobs)
+            .where(m.message_processing_jobs.c.message_id == message_id)
+            .values(
+                attempt_count=1,
+                cycle_attempt_count=1,
+                claim_token=uuid4(),
+                worker_instance_id=uuid4(),
+                claimed_at=now,
+                next_attempt_at=None,
+                last_error_code="MODEL_TIMEOUT",
+                last_error_at=now,
+                finished_at=now,
+                updated_at=now,
+            )
+        )
+
+    return mark

@@ -95,7 +95,7 @@ to the repository root.
 - **Context/problem:** Later processing failures or corrections must not erase original student submissions.
 - **Decision:** The implemented repository only inserts message content; there is no message edit/delete API. Processing metadata is separate from content.
 - **Rationale:** Preserves the original evidence of what the student submitted and its traceability.
-- **Tradeoffs:** This is not a database-wide immutability guarantee: privileged SQL can change records. Production redaction/retention remain unresolved; downgrade is destructive.
+- **Tradeoffs:** Slice 1 originally relied on application history preservation. SLICE2A-001 Stage 1 now rejects ordinary message history UPDATE/DELETE through database triggers; database administrators can still bypass controls. Production redaction/retention remain unresolved; revision 0002 rejects populated downgrade.
 - **Alternatives considered:** No comparative evaluation recorded in the cited sources.
 - **Evidence:** docs/schema.md §§11, 22–23; ai_tutor/repository.py; ai_tutor/models.py.
 
@@ -119,15 +119,16 @@ to the repository root.
 - **Alternatives considered:** No comparative evaluation recorded in the cited sources.
 - **Evidence:** docs/architecture.md §25.1; ai_tutor/api.py; ai_tutor/service.py.
 
-## ADR-012 — Defer AI processing and asynchronous worker design
+## ADR-012 — PostgreSQL-backed asynchronous processing
 
-- **Status:** Approved roadmap; not implemented; mechanisms unresolved.
+- **Status:** Approved roadmap, STEP5-001-A1 and SLICE2A-001; Stages 1–2 persistence and compatible admission implemented; worker processing remains unimplemented.
 - **Context/problem:** Admission must become durable before expensive tutoring work, and the stable baseline must remain usable while future processing is explored.
 - **Decision:** Slice 1 stops at PENDING. Plan Slice 2 asynchronous processing on feat/async-message-processing; later work must honor approved ownership, retry, recovery, and commit guarantees.
 - **Rationale:** Separates current proven admission from future AI behavior and preserves a reviewable main baseline.
-- **Tradeoffs:** No worker framework, broker/queue, scheduler, provider, or lease mechanism is selected. A feature branch is not approval to bypass unresolved decisions or add hypothetical infrastructure.
-- **Alternatives considered:** No comparative evaluation recorded in the cited sources.
-- **Evidence:** docs/architecture.md §§31.2–31.4; docs/ai-runtime.md; docs/decisions.md STEP5-002, STEP6-001, REPO-001.
+- **Amendment:** STEP5-001-A1 selects one separately deployed worker using PostgreSQL as the durable work source. Clients initially use authenticated GET polling. Dedicated queue services, Redis, Celery, RabbitMQ, and Kafka are excluded. Worker deployment and queue-service selection are distinct decisions.
+- **Tradeoffs:** Additional deployment supervision and database load; SLICE2A-001 now specifies discovery/ownership/recovery and polling wire details. Provider and deployment platform remain unresolved. A feature branch alone grants no design approval.
+- **Alternatives considered:** Synchronous POST processing, API-process background tasks, dedicated broker/task platform, repeated POST polling, and push delivery; see STEP5-001-A1 for tradeoffs.
+- **Evidence:** docs/architecture.md §§31.2–31.4; docs/ai-runtime.md; docs/decisions.md STEP5-001-A1, STEP5-002, STEP6-001, REPO-001. decisions.md remains the approval authority.
 
 ## ADR-013 — Demo opaque bearer credentials; production identity deferred
 
@@ -141,9 +142,16 @@ to the repository root.
 
 ## Scope and verification
 
-The sole application endpoint admits student messages. The initial Alembic migration
+Application endpoints admit student messages and read their authorized status/results. The initial Alembic migration
 creates ten supporting tables; tests exercise the real PostgreSQL boundaries. AI response
-generation, RAG, agent tools, and background processing remain planned. See [README.md](../README.md)
+generation, RAG, and agent tools remain planned; the Stage 3 background worker is tested with deterministic processors. See [README.md](../README.md)
 for current verification results and [SLICE1_HANDOFF.md](../SLICE1_HANDOFF.md) for the implemented
 boundary walkthrough. Future ADR updates must trace back to actual human approvals or clearly
 identify proposals; they must not silently redefine a contract.
+
+## ADR-014 — Slice 2a processing persistence and staged deployment
+
+- **Status:** Approved design; Stages 1–4 persistence/admission/worker/model-client abstraction and fake implemented for development review; Stage 5 polling also implemented; production provider pending.
+- **Decision:** SLICE2A-001 uses a job table without duplicate status, session sequences and FAILED barriers, leased/fenced workers, unique correlated tutor responses, classified closure/cancellation, and nested authenticated status GET. Future explicit retries permit only known transient failures under authorization, ACTIVE session, budgets and rate limits; no new student retry endpoint in Slice 2a.
+- **Tradeoffs:** Deferred integrity triggers require coordinated message/job writes and fixture updates. Revision 0002 must not run with old admission. Legacy order uses deterministic timestamps/UUIDs; unknown closure fails closed. PostgreSQL remains durable authority; no broker or exactly-once external-call claim.
+- **Evidence:** decisions.md SLICE2A-001; schema.md §31.6; architecture.md §31.8; ai-runtime.md Slice 2a; api-contract.md polling.

@@ -96,8 +96,7 @@ Data / Infrastructure
    └── Observability
 ```
 
-The MVP is a modular monolith: these responsibilities may be separated
-into modules/layers inside one deployable backend application.
+The MVP is a modular monolith with shared application modules and service/repository boundaries. Under STEP5-001-A1, the deployment roles are FastAPI and one separately deployed PostgreSQL-backed background worker. Both use the same authoritative PostgreSQL database.
 
 They are not separate microservices.
 
@@ -700,7 +699,9 @@ Important AI-system records, traces, and eval runs should retain relevant model,
 
 Prefer actionable alerts. Candidates include Tutor failure-rate spikes, model/provider failures, database unavailability, retrieval failure spikes, unauthorized-action attempts, unexpected cost increases, and latency beyond defined operational targets. Exact operational thresholds remain deferred until baseline data exists; do not alert on every fluctuation.
 
-Evals measure behavioral quality; observability measures operational health. They may be correlated but are not substitutes. Collector/exporter/storage, sampling, telemetry access/retention, alert delivery, and deployment mechanisms remain unresolved where not already approved; no infrastructure is introduced by this contract.
+Evals measure behavioral quality; observability measures operational health. They may be correlated but are not substitutes. Collector/exporter/storage, sampling, telemetry access/retention, alert delivery, and deployment mechanisms remain unresolved where not already approved; the original Step 10 contract introduced no infrastructure. The worker deployment is separately approved by STEP5-001-A1.
+
+The worker adds an independently supervised deployment lifecycle. Operations must account for API/worker release compatibility, database credentials and connection capacity, startup/restart/shutdown, worker health, pending-work age/backlog, and processing failures. Correlate admission, processing, and subsequent GET requests through message/session identifiers and appropriate trace links. Keep logs metadata-first. Exact supervision, instrumentation storage, and thresholds remain unresolved. SLICE2A-001 and §31.8 define shutdown/recovery mechanisms.
 
 ## 26. Testing Architecture
 
@@ -745,7 +746,7 @@ implementation/runtime/API contracts as appropriate.
 
 ## 28. Deployment Architecture
 
-Development begins locally.
+Development begins locally. STEP5-001-A1 selects one separately deployed PostgreSQL-backed worker alongside FastAPI. It does not select a cloud provider, orchestration platform, worker framework, or dedicated queue service. No Redis, Celery, RabbitMQ, or Kafka is introduced.
 
 The application should remain deployable to a cloud environment without
 requiring an architectural rewrite.
@@ -841,7 +842,12 @@ For a new send, validate ACTIVE session and eligible assigned coursework/problem
         ↓
 Commit student input + associated idempotency record
         ↓
-Acquire single processing ownership
+Return POST admission response: 201, student_message_id, PENDING
+
+Separate background-processing path, after durable input commit:
+PostgreSQL-backed worker discovers admitted work
+        ↓
+Acquire single processing ownership under the approved guarantees
         ↓
 Retrieve approved curriculum context
         ↓
@@ -861,7 +867,7 @@ Tool result → Orchestrator/model context before further reasoning; repeat with
         ↓
 Commit tutor output + logically coupled state/evidence + COMPLETED status
         ↓
-Return student-facing response
+Authenticated GET retrieves current state and committed student-safe output
         ↓
 Continue / complete / escalate
 ```
@@ -875,9 +881,9 @@ sensitive application actions.
 
 See `api-contract.md` §§2–6 and `ai-runtime.md` for the approved flow. Student input and tutor output are separate correlated messages. Processing metadata follows PENDING → PROCESSING → COMPLETED or FAILED without rewriting content history. External calls do not run inside the durable-input transaction.
 
-Only one active processing run owns a student message. Stale work must be detectable/recoverable. Retries/recovery/concurrency cannot create competing tutor responses or duplicate durable effects: reuse a previously successful logical action. User-operation idempotency and system-action idempotency are distinct. Locks, leases, queues, workers, and their physical design remain unresolved.
+Only one active processing run owns a student message. Stale work must be detectable/recoverable. Retries/recovery/concurrency cannot create competing tutor responses or duplicate durable effects: reuse a previously successful logical action. User-operation idempotency and system-action idempotency are distinct. STEP5-001-A1 selects the worker deployment and PostgreSQL work source. Physical discovery, ownership, locking/lease and recovery were deferred here; approved SLICE2A-001 and §31.8 now define this slice. No dedicated queue service is selected.
 
-Session closure is ACTIVE → CLOSED. New work cannot begin after closure; previously admitted PENDING/PROCESSING work may finish. FAILED work in CLOSED cannot begin explicit retry. Authorized replay may retrieve historical state/results without processing. Start New atomically closes the old ACTIVE session and creates the replacement; failure leaves the old session ACTIVE. Resumability duration remains unresolved.
+Session closure is ACTIVE → CLOSED. New work cannot begin after closure; previously admitted PENDING/PROCESSING work may finish under NORMAL closure with current authorization; SLICE2A-001 cancels unfinished work for administrative/unknown closure. FAILED work in CLOSED cannot begin explicit retry. Authorized replay may retrieve historical state/results without processing. Start New atomically closes the old ACTIVE session and creates the replacement; failure leaves the old session ACTIVE. Resumability duration remains unresolved.
 
 MVP coursework eligibility is distinct from enrollment. Application services validate specific assignment/release eligibility before new tutoring. No class/group/individual allocation infrastructure is selected here.
 
@@ -889,7 +895,7 @@ Approved configurable runtime defaults are 4,000 message characters, five agent 
 
 ## 31.2 Approved Step 5 component flows
 
-These are responsibilities inside the existing local-first modular monolith, not new deployments, queues, workers, or microservices. Approval: `decisions.md` STEP5-001 through STEP5-003.
+These remain responsibilities inside the local-first modular monolith. Approved STEP5-001-A1 amends STEP5-001 to permit one separate worker deployment alongside FastAPI. Deployment separation does not change application, model, tool, repository, or mastery-authority boundaries. No dedicated queue service or domain microservice decomposition is added. Approval: `decisions.md` STEP5-001 through STEP5-003 and STEP5-001-A1.
 
 | Component | Responsibility |
 | --- | --- |
@@ -903,18 +909,19 @@ These are responsibilities inside the existing local-first modular monolith, not
 | ToolExecutor | Mediate validated model-requested actions through application services |
 | ProgressService | Apply product-owned rubric to accumulated validated evidence |
 | PostgreSQL | Authoritative durable application state |
+| Background worker | Execute durably admitted work through existing application/runtime boundaries; PostgreSQL remains the durable work source |
 
 Session entry: Student → Frontend → FastAPI → authenticate → authorize → validate coursework eligibility → validate problem/assignment relationship → check existing ACTIVE session. Create ACTIVE if none is appropriate; otherwise offer approved Resume Existing / atomic Start New for a resumable session. Failed replacement leaves the old session ACTIVE.
 
-Message entry preserves §31 replay handling: authenticate/authorize and validate applicable business context, distinguish historical replay from new work, then validate ACTIVE eligibility for a new send. Commit input/idempotency state before processing ownership and expensive AI work. A closed-session replay is not rejected as a new send.
+Message entry preserves §31 replay handling: authenticate/authorize and validate applicable business context, distinguish historical replay from new work, then validate ACTIVE eligibility for a new send. Commit input/idempotency state before processing ownership and expensive AI work. A closed-session replay is not rejected as a new send. After input/idempotency commit, FastAPI returns the admission response. The separate worker performs asynchronous processing. Normal client status checks use authenticated GET; authorized POST replay remains read-only and available for uncertain send outcomes.
 
 Runtime: Orchestrator → RAG → Context Builder → model → structural validation → policy/authority validation → business/state validation. Context includes relevant problem/objective, approved prerequisites, student evidence/progress, recent attempts, POCs, retrieved chunks, current message, instructions, and allowed tools.
 
 Tool branch: Orchestrator → ToolExecutor → application/service logic → repository → PostgreSQL. Enforce arguments, authorization, authority, state, and durable-action idempotency. Results return to the Orchestrator and enter model context before further reasoning. The model must not presume success. The Orchestrator enforces the existing five-step configurable limit.
 
-Final branch (no further required tool actions): validated final response → services → repository → PostgreSQL; atomically persist logically coupled output/evidence/state and completion as appropriate, then COMMIT → FastAPI controlled HTTP response → Frontend → Student.
+Final branch (no further required tool actions): worker runtime → validated final response → services → repository → PostgreSQL → atomic commit of logically coupled output/evidence/state and completion as appropriate. Separately: Frontend → authenticated/authorized FastAPI GET → committed state/result → controlled student-safe response. The worker does not complete or replace the original POST response.
 
-Recovery starts from the last durable commit, not lost model output. Only the currently valid owner may finalize; a stale former owner cannot finalize after transfer. Reuse previously committed logical effects; failed/uncommitted effects may be attempted again under approved rules. Exact ownership/reclamation mechanism remains deferred.
+Recovery starts from the last durable commit, not lost model output. Only the currently valid owner may finalize; a stale former owner cannot finalize after transfer. Reuse previously committed logical effects; failed/uncommitted effects may be attempted again under approved rules. The Slice 2a ownership/reclamation contract is now defined by SLICE2A-001 and ai-runtime.md; implementation remains staged.
 
 Teacher review: Teacher → Frontend → FastAPI → authenticate → authorize teacher/student/course relationships → escalation service → repository → PostgreSQL. Queue summaries show reason, demonstrated ability, suspected difficulty, previous interventions, and evidence-supported suggested focus. Deeper evidence remains authorization-scoped. Lifecycle and feedback remain those in §22 and api-contract.md §13.
 
@@ -933,7 +940,7 @@ Approval: decisions.md STEP6-001. Apply Growth → Bottleneck → Solution → T
 
 The thin model abstraction should permit workload-appropriate models when justified: stronger models for complex tutoring reasoning and cheaper/faster models for simpler classification/transformation only when evaluations support acceptable quality. Embeddings use a separate embedding model; provider/model/dimension remain unresolved.
 
-Initial curriculum remains one small curated unit. Additional application instances, routing/load balancing, caching, database read scaling, improved vector indexing/search, model routing, and asynchronous processing are evolutionary options. Kubernetes, microservices, queues, sharding, and dedicated vector infrastructure are not introduced for hypothetical future scale. Exact deployment and physical scaling mechanisms remain deferred.
+Initial curriculum remains one small curated unit. STEP5-001-A1 selects asynchronous processing through one separately deployed PostgreSQL-backed worker for workflow needs. Additional application instances, routing/load balancing, caching, database read scaling, improved vector indexing/search, and model routing remain evolutionary options. Kubernetes, microservices, dedicated queue services, sharding, and dedicated vector infrastructure are not introduced for hypothetical future scale. Other deployment and physical scaling mechanisms remain deferred; a PostgreSQL-backed logical backlog is not a dedicated queue service.
 
 ## 31.4 Step 7 — Failure boundaries
 
@@ -941,7 +948,7 @@ Approval: decisions.md STEP7-001. Use What can fail → What happens → How do 
 
 Required retrieval failure cannot be disguised as curriculum-grounded tutoring. Provider success still requires structural, policy/authority, action, and business/state validation. Invalid output must be rejected without executing disallowed actions. Required database writes must commit before their results are treated as durable; logically coupled writes roll back together on pre-commit failure, and an uncommitted final tutor response is withheld.
 
-Keep the Step 5 recovery model: bounded eligible retries, durable input, explicit retry of the same FAILED message, one valid finalizing owner, stale-owner rejection, recovery from committed state, durable-action reuse, lost-response replay, and closure restrictions. Process crashes do not imply a requirement to introduce worker infrastructure.
+Keep the Step 5 recovery model: bounded eligible retries, durable input, explicit retry of the same FAILED message, one valid finalizing owner, stale-owner rejection, recovery from committed state, durable-action reuse, lost-response replay, and closure restrictions. Process crashes alone do not justify additional infrastructure. The worker selected by STEP5-001-A1 serves the asynchronous workflow; existing crash-recovery and valid-owner guarantees still apply.
 
 Circuit breakers, extra fallback providers, and sophisticated degradation strategies are future options requiring demonstrated reliability need and approval, not MVP requirements. Detailed failure traces/metrics/alerts/rate monitoring/dashboards belong primarily to Step 10; existing OpenTelemetry and internal classification obligations remain. Detailed tests/evals belong primarily to Step 9; security-specific handling remains governed by security.md and Step 8.
 
@@ -966,6 +973,16 @@ Context Builder selects relevant evidence for diagnosis; the orchestrator suppor
 ## 31.7 Slice 1 implementation boundary
 
 Approval: decisions.md SLICE1-001 through SLICE1-003. Minimal FastAPI request validation → demo opaque-bearer authentication → service authorization/admission/replay → repository → PostgreSQL transaction → commit → 201 creation or 200 replay. Use SQLAlchemy/Alembic/pytest and UUIDs. Record metadata-only request completion and OpenTelemetry-compatible request/transaction spans, without a telemetry platform/exporter. No AI processing starts and all newly admitted messages remain PENDING. Existing users/coursework/sessions are provisioned outside this endpoint.
+
+## 31.8 Slice 2a approved processing boundary
+
+Approval: decisions.md SLICE2A-001 supersedes physical processing deferrals above. One PostgreSQL-backed worker uses messages.processing_status as sole authority plus one operational job row per student message; schema.md §31.6 defines constraints/triggers. Stage 1 implements persistence; Stage 2 now supplies compatible atomic message/sequence/job/idempotency admission. The service still commits before returning success, and replay makes no processing writes. Stage 3 implements the worker repository/service and async runner with an injected processor and deterministic PostgreSQL tests. Stage 4 adds the thin model-client adapter and deterministic fake, with no database capability passed to the client. Stage 5 implements authenticated GET polling with one consistent read query and no scheduling writes. Stage 6 validates these connected boundaries and failure recovery with real PostgreSQL and deterministic model fakes. Production model processing and deployment remain pending.
+
+Admission must allocate session_sequence and commit message + job + idempotency + counter together. Lock order: user → session → authorization rows → exact head message → job. READ COMMITTED; reselect oldest unresolved student sequence under session lock. PENDING backoff, PROCESSING, and FAILED block later messages. SKIP LOCKED abandons busy sessions, never skips their head. A partial unique index prevents two PROCESSING rows per session. Permanently nonretryable FAILED remains a barrier; continue in a new eligible session. COMPLETED/CANCELLED release the barrier subject to authorization.
+
+Worker methods claim_next, renew_lease, complete, record_failure, and cancel own short database transactions; process_next/run invoke the processor outside transactions. The backend rechecks account, enrollment, coursework, and closure at claim/renewal/completion. NORMAL CLOSED permits already admitted work; ADMINISTRATIVE/UNKNOWN CLOSED and revoked access cancel unfinished work. Administrative/revocation writers must coordinate with the same lock order. Message completion never closes a session. Cross-session memory is future work.
+
+Claim fencing, budgets, shutdown, and metrics are specified in ai-runtime.md Slice 2a; the authenticated polling response is specified in api-contract.md. Database shape triggers do not substitute for these service rules. No dedicated broker, Redis, Celery, RabbitMQ, Kafka, RAG, summaries, or multi-agent orchestration is introduced.
 
 ## 32. Unresolved Architecture Decisions
 

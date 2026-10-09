@@ -1,3 +1,7 @@
+> **Stage 6 review boundary:** the asynchronous lifecycle is verified end to end with
+> real PostgreSQL and deterministic model fakes: 217 tests passed. Production model
+> integration and deployment remain pending. Stop for review; not deployed.
+
 # AI Tutor
 
 A K–12 tutoring project designed to help students learn through guided instruction,
@@ -34,10 +38,13 @@ and transactions; repositories execute database operations. New messages remain 
 
 Planned asynchronous AI processing will consume durably admitted work, establish processing
 ownership, and eventually coordinate authorized retrieval, selected context, model calls,
-validated tools, and durable tutor output. Worker/queue technology, scheduling, and physical
-ownership/recovery mechanisms are **not implemented or selected by this roadmap**. Existing
-contracts govern single-owner finalization, stale-owner rejection, idempotency, and commit
-boundaries when those features are implemented.
+validated tools, and durable tutor output. Approved amendment STEP5-001-A1 selects one
+separately deployed PostgreSQL-backed worker and authenticated GET status polling, without
+a dedicated queue service. SLICE2A-001 now approves scheduling, ownership/recovery, and
+polling contracts. Stages 1–4 implement database persistence, compatible admission, the worker runtime,
+and a deterministic model-client integration boundary.
+Production model processing remains **not implemented**; Stage 5 supplies authenticated GET polling. Worker tests verify
+single-owner finalization, stale-owner rejection, idempotency, and commit boundaries.
 
 ## Current implementation — Slice 1
 
@@ -45,7 +52,8 @@ boundaries when those features are implemented.
 - Server-provisioned opaque bearer credentials mapped to existing users; no login/token issuer.
 - Backend authorization, active course enrollment, explicit assignment eligibility, and
   assignment/problem/course consistency checks.
-- SQLAlchemy service-owned transactions and PostgreSQL UUID/message/idempotency persistence.
+- SQLAlchemy service-owned transactions atomically allocate a per-session sequence and persist
+  the PostgreSQL student message, unclaimed processing job, and idempotency record.
 - Exact-content replay, database unique constraints, and student-level locking for concurrency.
 - `201` creation and `200` replay; new messages are durably `PENDING` before success is returned.
 - OpenTelemetry request/transaction spans and trace-context propagation, plus structured,
@@ -89,7 +97,7 @@ The GitHub repository is private initially.
 | Slice | Scope | Status |
 | --- | --- | --- |
 | 1 | Message Admission | Implemented |
-| 2 | Asynchronous AI Processing | Planned; separate development branch |
+| 2 | Asynchronous AI Processing | Stages 1–6 implemented/validated for review; production model provider pending |
 | 3 | Agent Orchestration and Retrieval | Planned |
 | 4 | Verification and Evaluation | Planned expansion of existing tests and eval contracts |
 
@@ -146,6 +154,12 @@ the input was saved; same-key replay can determine the result of an uncertain co
 
 ## Testing and verification
 
+Stage 2 verification on **2026-10-08**: the complete real-PostgreSQL suite passed
+**109 tests**, including migration round-trip/backfill and atomic admission tests.
+All 18 Stage 1 integration failures are resolved without weakening their public assertions.
+See [Stage 2 handoff](docs/handoffs/slice2a-stage2.md) for their classification and exact commands.
+Worker, model, polling, and explicit-retry behavior remains unimplemented.
+
 Use a disposable PostgreSQL database whose user can create schemas:
 
 ```sh
@@ -195,3 +209,64 @@ No type checker is configured yet; Ruff, compilation, and PostgreSQL tests are t
 
 RAG, Context Builder, models, orchestration, tools, tutor output, explicit retry processing,
 production auth, group allocation, and the wider observability platform remain out of scope.
+
+
+## Slice 2a Stage 3 — Worker review boundary
+
+`ai_tutor.worker.Worker(service, processor).run(stop)` runs one active claim per worker
+instance. Construct `ProcessingService` with a SQLAlchemy sessionmaker bound to the same
+PostgreSQL database as admission. The injected processor is an async, nonblocking callable
+that accepts `ProcessingInput` and returns validated student-safe text; deterministic test
+fakes are in `tests/test_worker.py`. No production processor or deployment entrypoint is supplied.
+A future deployment entrypoint must connect its termination signal to the asyncio stop event.
+
+The worker commits a claim before calling the processor, renews leases independently, and
+fences response/failure writes in separate short transactions. Failed or backoff-delayed
+session heads block later messages. PostgreSQL recovers expired claims within the same
+persisted budget. Logs exclude input/output and claim tokens; metrics have no exporter.
+
+Stage 3 verification on **2026-10-08**: **164 real-PostgreSQL tests passed**, including
+55 worker tests and all 109 existing tests. Ruff lint and formatting passed.
+See [Stage 3 handoff](docs/handoffs/slice2a-stage3.md) for transaction boundaries,
+contract review, exact commands, and remaining integration responsibilities.
+
+
+## Slice 2a Stage 4 — Deterministic model-client boundary
+
+`ai_tutor.model_client` provides `ModelClient.generate(ProcessingInput)`, `ModelProcessor`
+(the adapter to the existing worker callable), and `FakeModelClient(response)`.
+The fake requires explicit synthetic text and is never selected automatically or used as
+fallback after provider failure. For a controlled test, inject
+`Worker(service, ModelProcessor(FakeModelClient("Synthetic test response")))`.
+
+The adapter makes one call and checks the existing persisted-text shape. The worker still
+owns timeout, heartbeat, fencing, and retry budgets. Semantic tutoring/output policy and
+production provider selection remain unresolved; a nonempty string is not evidence of safety.
+There are no prompts, SDKs, network calls, tools, or new endpoint/migration in this stage.
+See [Stage 4 handoff](docs/handoffs/slice2a-stage4.md) for verification and the contract review.
+
+
+## Slice 2a Stage 5 — Authenticated status polling
+
+`GET /api/v1/coaching/sessions/{session_id}/messages/{message_id}/status` reads one
+consistent PostgreSQL snapshot of current account, session/course visibility, message state,
+and persisted tutor response. No body or Idempotency-Key is required. All authorized states
+return 200 with `Cache-Control: no-store`; FAILED/CANCELLED expose only approved safe errors.
+CLOSED sessions remain readable with current authorization. Reads do not create jobs or retries.
+
+No frontend polling loop or production model integration is supplied. See
+[Stage 5 handoff](docs/handoffs/slice2a-stage5.md) for exact verification and contract findings.
+
+
+## Slice 2a Stage 6 — End-to-end and failure validation
+
+The full suite passes **217 tests**, including 19 connected lifecycle cases added in
+`tests/test_async_lifecycle.py`. Verification connects actual FastAPI POST/GET routes,
+services/repositories, migrated PostgreSQL, the worker, and the configured deterministic
+model fake. It includes process termination/recovery, competing workers, FIFO and failure
+barriers, policy changes, read-only replay/polling, and atomic output visibility.
+
+No runtime defect was found in Stage 6, and no application code, migration, endpoint, or
+contract policy changed. The tests use synthetic content; they do not certify production
+model safety, deployment supervision, load capacity, or real-student readiness.
+See [Stage 6 acceptance map and handoff](docs/handoffs/slice2a-stage6.md).

@@ -573,7 +573,7 @@ Approval: 2026-10-04 human documentation-synchronization request; see `decisions
 - MVP tutoring starts from assigned/published coursework only. Enrollment establishes course membership; separate coursework eligibility establishes that specific work is assigned/released to the student. Enrollment alone is insufficient. Class/group/individual allocation mechanisms remain deferred; open-topic/free-practice tutoring is outside MVP scope.
 - Every student input is a Message; only an actual coursework problem-solving attempt/reasoning becomes a StudentAttempt. Attempts retain their source message. Attempts and evidence are append-only and interaction-attributable; retry/recovery must not duplicate a logical attempt or evidence item.
 - Commit student input before retrieval/model/AI processing. Commit tutor output and logically coupled state/evidence before returning it. Downstream failure never erases committed input.
-- Students may close their own ACTIVE session: ACTIVE → CLOSED, without teacher approval. Closure prevents new tutoring work; work already admitted as PENDING/PROCESSING may finish. No new message or new failed-message retry may begin in CLOSED. Historical replay remains allowed without processing, subject to authorization.
+- Students may close their own ACTIVE session: ACTIVE → CLOSED, without teacher approval. Closure prevents new tutoring work; work already admitted as PENDING/PROCESSING may finish under NORMAL closure with current authorization; SLICE2A-001 cancels unfinished work for administrative/unknown closure. No new message or new failed-message retry may begin in CLOSED. Historical replay remains allowed without processing, subject to authorization.
 - For the same eligible coursework, offer Resume Existing or Start New when a resumable active session exists. Start New closes the old session and creates the new ACTIVE session atomically; failure leaves the old session ACTIVE. Authentication lifetime is separate from coaching-session resumability; no expiration duration is approved.
 - Student progress uses BUILDING / DEVELOPING / STRONG, distinct from official mastery. The application aggregates correctness, independence, explanation, and transfer evidence; model confidence is not progress. The product owns the consistent MVP rubric. Learning targets originate from approved curriculum/teacher-defined objectives; future teacher customization is not implicitly included. Calibrated thresholds remain deferred.
 - Authorized teachers/human processes own official mastery. Every authoritative change preserves previous/new decision or state, actor/authority, timestamp, and relevant provenance while allowing efficient current-state reads. AI evidence is not rewritten to agree with teacher decisions.
@@ -592,6 +592,9 @@ Approval: 2026-10-05 human Step 5 Flow synchronization request; see `decisions.m
 - Explicit retry uses the existing FAILED message and must not silently reopen a CLOSED session. The existing permission for admitted PENDING/PROCESSING work to finish after closure is preserved.
 - Teacher-facing feedback Yes / Partly / No maps to CORRECT / PARTLY_CORRECT / INCORRECT. Preserve original AI prediction and separately attributed teacher determination. AI-suggested teacher focus remains a recommendation.
 - ProgressService applies the product rubric to validated, accumulated evidence. Multiple evidence points should support substantial progress changes. MasteryEvidence describes observations; progress describes accumulated interpretation; MasteryRecord describes official recognition. BUILDING / DEVELOPING / STRONG remain progress vocabulary, not official mastery states or a newly approved irreversible transition graph.
+
+- Under STEP5-001-A1, message admission and tutor response generation are asynchronous. Clients initially use authenticated GET polling for response status and committed output. POST replay remains available for uncertain submission outcomes and does not initiate processing.
+- A completed learning session remains CLOSED to new messages. Students continue through new eligible sessions using minimum relevant authorized prior context. Existing records remain attributable to their original sessions. Message COMPLETED is a processing outcome, not a new session state, automatic closure trigger, or mastery decision. Existing ACTIVE-session resume/atomic Start New behavior is preserved.
 
 ## 22.3 Approved Steps 6–7 scale and failure guarantees
 
@@ -666,3 +669,9 @@ Approved requirement changes should:
 2.  update dependent architecture/contracts where necessary,
 3.  be recorded in `decisions.md` when architecturally significant,
 4.  trigger appropriate contract and regression review.
+
+## Slice 2a processing refinements — SLICE2A-001
+
+Oldest accepted unresolved student message first; at most one PROCESSING per session. Retry backoff and FAILED remain ordering barriers. Permanently nonretryable FAILED is not silently skipped; continuation uses a new eligible session, without implementing cross-session memory. COMPLETED/CANCELLED release the barrier only under valid authorization. Student message completion never closes a learning session.
+
+NORMAL closure permits admitted work; administrative/unknown closure cancels unfinished work. Disabled accounts or revoked enrollment prevent further processing and completion. Future explicit retries are limited to known transient provider/infrastructure failures with authorization, ACTIVE session, budgets and rate limits; no student-facing retry endpoint in Slice 2a. Idempotent replay never schedules work and returns 200 for stored FAILED.

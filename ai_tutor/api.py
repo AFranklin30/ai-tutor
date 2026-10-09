@@ -1,7 +1,7 @@
 import logging
 import re
 import time
-from typing import Optional
+from typing import Literal, Optional
 from uuid import UUID
 
 from fastapi import FastAPI, Header, Request, Response
@@ -49,6 +49,18 @@ class MessageResponse(BaseModel):
     status: str
 
 
+class TutorResponse(BaseModel):
+    tutor_message_id: UUID
+    content: str
+
+
+class PollingResponse(BaseModel):
+    student_message_id: UUID
+    status: Literal["PENDING", "PROCESSING", "COMPLETED", "FAILED", "CANCELLED"]
+    tutor_response: Optional[TutorResponse] = None
+    error: Optional[PublicError] = None
+
+
 def create_app(settings: Optional[Settings] = None, engine=None, trace_provider=None):
     configure_logging()
     settings = settings or Settings.from_environment()
@@ -80,6 +92,8 @@ def create_app(settings: Optional[Settings] = None, engine=None, trace_provider=
             request.state.processing_status = None
             try:
                 response = await call_next(request)
+                if request.method == "GET":
+                    response.headers["Cache-Control"] = "no-store"
                 span.set_attribute("http.response.status_code", response.status_code)
                 return response
             finally:
@@ -134,7 +148,9 @@ def create_app(settings: Optional[Settings] = None, engine=None, trace_provider=
                 "error": {
                     "code": "storage_unavailable",
                     "message": (
-                        "Unable to confirm the request. Retry with the same Idempotency-Key."
+                        "Status is temporarily unavailable. Please try again."
+                        if request.method == "GET"
+                        else "Unable to confirm the request. Retry with the same Idempotency-Key."
                     ),
                 }
             },
@@ -180,5 +196,25 @@ def create_app(settings: Optional[Settings] = None, engine=None, trace_provider=
         request.state.message_id = str(result.student_message_id)
         request.state.processing_status = result.status
         return MessageResponse(student_message_id=result.student_message_id, status=result.status)
+
+    @app.get(
+        "/api/v1/coaching/sessions/{session_id}/messages/{message_id}/status",
+        response_model=PollingResponse,
+        responses={code: {"model": ErrorResponse} for code in (401, 403, 404, 422, 500, 503)},
+    )
+    def get_message_status(
+        session_id: UUID,
+        message_id: UUID,
+        request: Request,
+        authorization: Optional[str] = Header(default=None),
+    ):
+        request.state.session_id = str(session_id)
+        request.state.message_id = str(message_id)
+        if len(request.headers.getlist("authorization")) > 1:
+            authorization = None
+        principal = resolve_principal(authorization, settings)
+        result = service.read_status(principal, session_id, message_id)
+        request.state.processing_status = result["status"]
+        return result
 
     return app

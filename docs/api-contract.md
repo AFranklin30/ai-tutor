@@ -61,9 +61,7 @@ The implementation must preserve these invariants:
 
 `POST /api/v1/coaching/sessions/{session_id}/messages`
 
-Creates a new student message in an existing coaching session and
-
-attempts to process it through the tutor runtime.
+Creates and durably admits a student message in an existing session. After input/idempotency commit, return 201 with student_message_id and initial PENDING status. Tutor processing occurs asynchronously through the PostgreSQL-backed worker selected by STEP5-001-A1.
 
 ## Authentication
 
@@ -134,7 +132,11 @@ For a new send, validate ACTIVE session and eligible coursework
     ↓
 BEGIN TRANSACTION
     ↓
+Allocate session sequence / advance counter under the session lock
+    +
 Persist student message as PENDING
+    +
+Persist unclaimed processing job
     +
 Persist/associate idempotency record
     ↓
@@ -142,7 +144,10 @@ COMMIT
 ════════════════════════════════
 Durable student-input boundary
     ↓
-Mark/start processing
+Return POST admission response
+
+Separate worker path, after durable input commit:
+Establish valid processing ownership and mark/start processing
     ↓
 Constrained curriculum retrieval
     ↓
@@ -172,8 +177,10 @@ COMMIT
 ════════════════════════════════
 Durable tutor-output boundary
     ↓
-Return student-safe response
+Expose committed state/output through authenticated GET polling
 ```
+
+Stage 2 implementation keeps authorization locks, replay resolution, and all admission writes within the existing service-owned transaction. The diagram identifies the logically coupled write unit; sequence/job creation happens only for a new send. Replay makes no message/job/key/counter writes. Commit failure rolls the entire unit back.
 
 ## Student input, attempt, evidence, and response correlation
 
@@ -185,19 +192,19 @@ Initial successful creation uses **201 Created**. An idempotent replay returns c
 
 ## Processing ownership and durable effects
 
-Only one active processing run may own a student message. Concurrent attempts, automatic/explicit retries, and stale recovery must not produce competing tutor responses or duplicate durable actions, evidence, POCs, attempts, or escalations. If the same logical action already succeeded for the interaction, reuse/return the existing effect. This system-action idempotency is separate from user-operation idempotency. Exact locks, leases, queues, workers, and physical storage remain deferred.
+Only one active processing run may own a student message. Concurrent attempts, automatic/explicit retries, and stale recovery must not produce competing tutor responses or duplicate durable actions, evidence, POCs, attempts, or escalations. If the same logical action already succeeded for the interaction, reuse/return the existing effect. This system-action idempotency is separate from user-operation idempotency. The separate PostgreSQL-backed worker is selected by STEP5-001-A1. SLICE2A-001 and schema.md §31.6 define ownership/recovery storage for this slice; no dedicated queue service is introduced.
 
 ## Step 5 recovery and lost-response guarantees
 
 Only the currently valid processing owner may finalize this student message. After ownership transfer, the stale former owner must not finalize competing results. PROCESSING does not establish perpetual liveness. Recovery resumes/restarts from the last durable commit; uncommitted in-memory model output need not be reconstructed.
 
-A failed turn may already have committed tool effects. Reuse those logical effects during retry/recovery; unsuccessful/uncommitted effects may be attempted again under approved rules. No lease, lock, queue, token, or worker design is selected.
+A failed turn may already have committed tool effects. Reuse those logical effects during retry/recovery; unsuccessful/uncommitted effects may be attempted again under approved rules. The worker deployment is selected; SLICE2A-001 defines lease, lock, token, work-discovery, and recovery mechanisms, with implementation staged.
 
 A database commit can succeed while its HTTP response is lost. Same-key/same-payload replay returns current existing operation state/result, not an automatic duplicate-key error or another execution of completed work. Changed payload returns 409. Preserve §5's replay-before-new-send-state-check distinction, including CLOSED-session replay.
 
 ## Message Processing Lifecycle
 
-A student message has the following processing states:
+A student message has the following processing states (SLICE2A-001 also adds CANCELLED):
 
 ``` text
 PENDING
@@ -230,6 +237,10 @@ a configurable stale threshold.
 Tutor processing completed successfully and the tutor-visible
 
 response/state required for the turn has been durably committed.
+
+### `CANCELLED`
+
+Trusted authorization or administrative/unknown-closure policy has stopped unfinished processing. Terminal, no response, no restart through replay. Input history remains durable.
 
 ### `FAILED`
 
@@ -411,9 +422,7 @@ workflow.
 
 ## Successful Response
 
-A successful student-facing response should expose only information
-
-required by the student client.
+A completed student-facing result exposes only information required by the client. The example below describes committed completed output, not the initial POST admission response. The approved Slice 2a polling subsection defines the GET envelope; Stage 5 implements this read-only endpoint.
 
 Example:
 
@@ -465,6 +474,26 @@ Preserve valid content exactly; reject whitespace-only content and extra identit
 Authenticate and authorize session/course access before replay; replay does not bypass access to the original message/session if the route names another session. Resolve authorized replay before new-send ACTIVE and specific assignment-eligibility gates. New sends require enrollment, explicit assignment eligibility, and consistent course/assignment/problem membership. Closed-session replay remains read-only. Existing API error semantics remain; a database dependency failure yields safe 503 without asserting that an unconfirmed write was saved. No new failure-processing or explicit retry endpoint is implemented.
 
 These approvals resolve earlier replay-status, normalization, key validation/retention, and PENDING-response deferrals for this slice only.
+
+## Asynchronous response polling — SLICE2A-001
+
+Approved replacement for the earlier STEP5-001-A1 flat route (no alias):
+`GET /api/v1/coaching/sessions/{session_id}/messages/{message_id}/status`.
+Both IDs are UUIDs. No request body or Idempotency-Key. Design approved; Stage 5 implemented and verified for continued development, not deployment.
+
+Authenticate and authorize the original student/session/course on every read. Require a student message in the route session. Apply existing non-disclosure, not the ACTIVE-only new-send gate. Read status and response from one consistent database snapshot. GET never admits work, retries, reopens sessions, or mutates learning state.
+
+All successfully read states return HTTP 200 and Cache-Control: no-store. Exact response fields:
+
+```json
+{"student_message_id":"<UUID>","status":"PENDING","tutor_response":null,"error":null}
+```
+
+PROCESSING uses the same shape with status PROCESSING. COMPLETED sets tutor_response to {"tutor_message_id":"<UUID>","content":"<persisted student-safe response>"} and error=null. FAILED has tutor_response=null and error={"code":"tutor_processing_failed","message":"Your message was saved, but the tutor could not complete a response."}. CANCELLED has tutor_response=null and error={"code":"message_processing_cancelled","message":"Your message was saved, but processing has stopped."}. No retryable field, lease/token, provider internals, or raw failure details. Revoked read authorization yields the protected-resource denial, not a cancellation payload.
+
+Errors use the existing error envelope: 401 authentication_required for invalid/missing credentials or disabled/missing account; 403 forbidden for legitimately discoverable forbidden actions; 404 not_found for missing/non-discoverable resources, mismatched session/message, or tutor-message ID; 422 validation_error for malformed UUIDs; 503 storage_unavailable/service_unavailable when GET cannot be served; 500 internal_error for unexpected invariant failure. GET unavailability text: "Status is temporarily unavailable. Please try again." Never instruct GET callers to resend POST. Stored FAILED is 200, not 503; background failure cannot change the already returned admission response.
+
+Client polls after 2s, then 4s/8s capped with ±20% jitter while PENDING/PROCESSING. Stop on COMPLETED/FAILED/CANCELLED or 401/403/404/422. On network/503 failure use 2/4/8/16/30s capped and respect a longer Retry-After. Pause hidden pages; resume/reload through GET using saved session/message IDs. An unknown message ID after lost POST acknowledgement is recovered with same-key/content replay before GET polling. Never automatically turn FAILED into a new POST or explicit retry.
 
 # 3. Error Contract
 
@@ -545,11 +574,11 @@ Example:
 
 Failure examples below assume an authorized retry remains permitted. `retryable: true` must not be interpreted as permission to start retry in CLOSED; apply current authorization/session rules.
 
-When the student message has already been committed and tutor processing
-
-fails because a required dependency is temporarily unavailable:
+When a required service/dependency is unavailable and the backend cannot fulfill the current operation:
 
 **HTTP:** `503 Service Unavailable`
+
+This is not the response to a successfully resolved idempotent POST replay. If the backend can return the accepted message, return 200 with its current state, including FAILED; do not copy the original processing failure's HTTP status. See §5 and decisions.md SLICE1-004.
 
 The student message remains stored and becomes `FAILED` if processing
 
@@ -679,6 +708,8 @@ processing.
 
 ## Retry and closure
 
+SLICE2A-001: future explicit retry is restricted to known transient model-provider or infrastructure failures, subject to current authorization, ACTIVE session, retry budgets, and rate limits. Invalid model output, authorization failures, policy violations, invalid requests, and unknown failures are not explicitly retryable. No student-facing explicit retry endpoint is implemented in Slice 2a; retry_generation is preserved for future work.
+
 Explicit retry validates eligibility on the existing FAILED student message, transitions it to PROCESSING under valid ownership, and never creates a new message or silently reopens a closed session. If its session is CLOSED, no new retry may begin. A same-key send replay returning FAILED is not an explicit retry and never starts processing.
 
 ## Processing
@@ -711,12 +742,14 @@ Scope: **authenticated student + operation + idempotency key**. A new logical me
 
 | Existing operation, same key and same payload | Replay outcome |
 | --- | --- |
-| PENDING | Return current PENDING state |
-| PROCESSING | Return current PROCESSING state |
-| COMPLETED | Return existing completed result |
-| FAILED | Return current FAILED state; do not reprocess |
+| PENDING | 200 OK; return current PENDING state |
+| PROCESSING | 200 OK; return current PROCESSING state |
+| COMPLETED | 200 OK; return existing completed result |
+| FAILED | 200 OK; return current FAILED state and the same student_message_id; do not reprocess |
 
 Same key with a different payload returns **409 Conflict**, preserves the original message unchanged, and creates no second message. For Slice 1, compare the parsed content string exactly, without trimming; session ID and serialization are not part of the logical payload.
+
+Approval: decisions.md SLICE1-004. A successful authorized same-key/same-payload POST replay always returns **200 OK**, including when stored processing status is FAILED. Return the previously accepted message; do not create another message, schedule another job, reset processing status, or start another processing attempt. A new intentional student message uses a new key. Internal worker retries do not use a new client idempotency key. A stored FAILED state does not make a successful replay unavailable. Use **503 Service Unavailable** only when a genuine service/dependency outage prevents the backend from fulfilling the current request.
 
 Replay asks “what happened to my operation?” Explicit retry asks “process my FAILED message again.” These are separate operations. Authentication and protected-resource authorization apply to both.
 
@@ -732,7 +765,9 @@ Required conceptual sequence:
 
 ``` text
 TRANSACTION A
+Allocate session sequence / advance counter under the session lock
 Create student message
+Create unclaimed processing job
 Create/associate idempotency record
 COMMIT
 External retrieval/model/tool processing
@@ -756,13 +791,13 @@ business invariants and truthfulness guarantees.
 
 ## Terminal failure and action guarantees
 
-After terminal processing failure, preserve the committed student message and mark it FAILED. Required dependency failure after bounded eligible recovery returns student-safe **503 Service Unavailable**. Keep specific internal failure categories separate from public errors; never expose provider errors, raw model output, internal prompts, or stack traces. Exact mapping for other failure categories remains a downstream contract decision.
+After terminal processing failure, preserve the committed student message and mark it FAILED. A genuine dependency outage that prevents fulfillment of the current HTTP request returns student-safe **503 Service Unavailable**. Successfully reading an accepted message for idempotent POST replay returns **200 OK**, even when its stored state is FAILED; the earlier processing failure does not change the replay HTTP status. Keep specific internal failure categories separate from public errors; never expose provider errors, raw model output, internal prompts, or stack traces. Exact mapping for other failure categories remains a downstream contract decision.
 
-The durable student-input transaction and tutor-result transaction are distinct. Logically coupled result/state/evidence and COMPLETED status commit before output is returned. Already successful logical tool effects are reused if later processing/commit fails; retries must not duplicate those effects. No physical concurrency design is selected.
+The durable student-input transaction and tutor-result transaction are distinct. Logically coupled result/state/evidence and COMPLETED status commit before output is returned. Already successful logical tool effects are reused if later processing/commit fails; retries must not duplicate those effects. SLICE2A-001 selects the physical processing concurrency design; durable tool-action mechanisms remain separate.
 
 ## Step 7 dependency failure behavior
 
-Approval: decisions.md STEP7-001. Required curriculum retrieval failure, including inability to obtain authorized curriculum because of system failure, must not be replaced with unsupported general-model output presented as grounded. Fail or degrade only within the operation's approved requirements. This does not require retrieval for unrelated operations. Required dependency failure after bounded eligible recovery retains the existing safe 503 behavior; no new fallback response or HTTP mapping is selected.
+Approval: decisions.md STEP7-001. Required curriculum retrieval failure, including inability to obtain authorized curriculum because of system failure, must not be replaced with unsupported general-model output presented as grounded. Fail or degrade only within the operation's approved requirements. This does not require retrieval for unrelated operations. Genuine dependency unavailability preventing fulfillment of the current request retains safe 503 behavior. SLICE1-004 clarifies that successful idempotent POST replay of stored FAILED is 200 and performs no processing; no fallback response is selected.
 
 A successful model/provider HTTP request does not establish successful tutoring. Reject structurally invalid, policy/authority-invalid, disallowed-action, or business/state-invalid output; do not execute disallowed actions. Treat processing as failed under the existing runtime/error policy, retain the corresponding internal category, and expose only safe public failure. Do not broaden automatic retry eligibility for deterministic validation failures.
 
@@ -991,6 +1026,10 @@ one.
 If an older session is no longer resumable under the approved lifecycle
 policy, a new session may be created.
 
+### Session continuity — STEP5-001-A1
+
+Completed learning sessions remain CLOSED to new messages. Continue through a new eligible session, with selected authorized prior context. Message COMPLETED alone does not close a session. Previously admitted PENDING/PROCESSING work may finish after NORMAL closure with current authorization; SLICE2A-001 cancels unfinished work for administrative/unknown closure; authorized historical GET and POST replay remain read-only. No CLOSED-session retry is added.
+
 ### Session Lifetime
 
 A tutoring/coaching session is persisted application state. It is not a
@@ -1074,7 +1113,7 @@ authority adds value rather than ordinary session closure.
 
 ### Closure and existing operations
 
-CLOSED prevents new tutoring work. A new message returns **409 Conflict**; a FAILED message cannot begin a new explicit retry. Work already admitted as PENDING/PROCESSING at closure may finish. Authorized same-key replay remains permitted but never initiates processing. ACTIVE → CLOSED requires no teacher approval and preserves history. Authentication lifetime is separate from coaching-session resumability; no duration is selected.
+CLOSED prevents new tutoring work. A new message returns **409 Conflict**; a FAILED message cannot begin a new explicit retry. Under SLICE2A-001, work already admitted as PENDING/PROCESSING may finish only for NORMAL closure with current authorization. ADMINISTRATIVE/UNKNOWN closure cancels unfinished work; absent/unrecognized reasons fail closed. Authorized same-key replay remains permitted but never initiates processing. ACTIVE → CLOSED requires no teacher approval and preserves history. Authentication lifetime is separate from coaching-session resumability; no duration is selected.
 
 # 12. Student Progress
 
@@ -1448,6 +1487,7 @@ The approved conceptual MVP API surface now includes at least:
 - `GET /api/v1/coaching/sessions/{session_id}`
 - `PATCH /api/v1/coaching/sessions/{session_id}`
 - `POST /api/v1/coaching/sessions/{session_id}/messages`
+- `GET /api/v1/coaching/sessions/{session_id}/messages/{message_id}/status` — status/result polling; approved by SLICE2A-001; implemented in Stage 5
 - `POST /api/v1/coaching/messages/{message_id}/retry`
 
 ## Student Progress
@@ -1497,7 +1537,7 @@ classified as `DECISION_REQUIRED` before implementation that depends on them.
 
 ------------------------------------------------------------------------
 
-Additional deferred implementation details: physical processing ownership/recovery and action-idempotency storage; physical mastery-history/teacher-feedback representation; class/group allocation; production idempotency expiration and remaining wire mappings beyond approved Slice 1 200 replay; non-dependency terminal failure HTTP mappings; message-to-attempt classification mechanics; broader transient retry eligibility. These do not permit changing approved conceptual outcomes.
+Additional deferred implementation details beyond approved SLICE2A-001: durable tool-action idempotency storage; physical mastery-history/teacher-feedback representation; class/group allocation; production idempotency expiration; remaining endpoint wire mappings beyond approved Slice 2a polling; message-to-attempt classification mechanics; future explicit-retry budgets/rate limits. These do not permit changing approved conceptual outcomes.
 
 # 19. Step 4 API Contract Status
 
