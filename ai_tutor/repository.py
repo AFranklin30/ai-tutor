@@ -2,7 +2,7 @@
 
 from uuid import uuid4
 
-from sqlalchemy import insert, select
+from sqlalchemy import insert, select, update
 
 from ai_tutor import models as m
 
@@ -89,7 +89,17 @@ class MessageRepository:
             is not None
         )
 
-    def insert_message(self, session_id, content, trace_id):
+    def allocate_sequence(self, session_id):
+        # Admission already holds the session lock. Counter allocation rolls back with input.
+        next_sequence = self.session.execute(
+            update(m.coaching_sessions)
+            .where(m.coaching_sessions.c.id == session_id)
+            .values(next_message_sequence=m.coaching_sessions.c.next_message_sequence + 1)
+            .returning(m.coaching_sessions.c.next_message_sequence)
+        ).scalar_one()
+        return next_sequence - 1
+
+    def insert_message(self, session_id, content, trace_id, session_sequence):
         message_id = uuid4()
         self.session.execute(
             insert(m.messages).values(
@@ -99,9 +109,14 @@ class MessageRepository:
                 content=content,
                 processing_status="PENDING",
                 trace_id=trace_id,
+                session_sequence=session_sequence,
             )
         )
         return message_id
+
+    def insert_processing_job(self, message_id):
+        # Database defaults create unclaimed work; this does not start processing.
+        self.session.execute(insert(m.message_processing_jobs).values(message_id=message_id))
 
     def associate_key(self, student_id, key, message_id):
         self.session.execute(
@@ -112,4 +127,48 @@ class MessageRepository:
                 idempotency_key=key,
                 message_id=message_id,
             )
+        )
+
+    def polling_snapshot(self, student_id, session_id, message_id):
+        # One statement snapshots account, visibility, status and response together.
+        # Historical visibility matches admission replay, not new-work eligibility.
+        reply = m.messages.alias("reply")
+        enrolled = (
+            select(m.enrollments.c.id)
+            .where(
+                m.enrollments.c.student_user_id == student_id,
+                m.enrollments.c.course_id == m.coaching_sessions.c.course_id,
+                m.enrollments.c.status == "ACTIVE",
+            )
+            .exists()
+        )
+        return (
+            self.session.execute(
+                select(
+                    m.users.c.is_active,
+                    m.users.c.role,
+                    m.messages.c.id.label("message_id"),
+                    m.messages.c.processing_status,
+                    reply.c.id.label("reply_id"),
+                    reply.c.content.label("reply_content"),
+                )
+                .select_from(
+                    m.users.outerjoin(
+                        m.coaching_sessions,
+                        (m.coaching_sessions.c.id == session_id)
+                        & (m.coaching_sessions.c.student_user_id == m.users.c.id)
+                        & enrolled,
+                    )
+                    .outerjoin(
+                        m.messages,
+                        (m.messages.c.session_id == m.coaching_sessions.c.id)
+                        & (m.messages.c.id == message_id)
+                        & (m.messages.c.author_type == "student"),
+                    )
+                    .outerjoin(reply, reply.c.in_reply_to_message_id == m.messages.c.id)
+                )
+                .where(m.users.c.id == student_id)
+            )
+            .mappings()
+            .one_or_none()
         )

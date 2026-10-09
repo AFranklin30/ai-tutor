@@ -22,10 +22,13 @@ def send(s, content="I need a hint.", key="send-1", **kwargs):
 
 def counts(s):
     with s.db.connect() as c:
-        return tuple(
+        result = tuple(
             c.scalar(select(func.count()).select_from(t))
             for t in (m.messages, m.idempotency_records)
         )
+        # These admission tests create student inputs only: every input needs exactly one job.
+        assert c.scalar(select(func.count()).select_from(m.message_processing_jobs)) == result[0]
+        return result
 
 
 def test_created_pending_visible_after_commit(seeded):
@@ -45,6 +48,20 @@ def test_created_pending_visible_after_commit(seeded):
         assert len(row["trace_id"]) == 32
         assert row["created_at"].tzinfo is not None
         assert c.execute(select(m.idempotency_records.c.message_id)).scalar_one() == row["id"]
+        assert row["session_sequence"] == 1
+        job = c.execute(select(m.message_processing_jobs)).mappings().one()
+        assert job["message_id"] == row["id"]
+        assert job["attempt_count"] == job["cycle_attempt_count"] == job["retry_generation"] == 0
+        assert job["claim_token"] is None and job["lease_expires_at"] is None
+        assert job["next_attempt_at"] is not None
+        assert (
+            c.scalar(
+                select(m.coaching_sessions.c.next_message_sequence).where(
+                    m.coaching_sessions.c.id == s.ids["session"]
+                )
+            )
+            == 2
+        )
 
 
 @pytest.mark.parametrize(
@@ -126,7 +143,7 @@ def test_closed_new_send_but_replay_allowed(seeded):
         c.execute(
             update(m.coaching_sessions)
             .where(m.coaching_sessions.c.id == s.ids["session"])
-            .values(status="CLOSED")
+            .values(status="CLOSED", closure_reason="NORMAL")
         )
     replay = send(s)
     assert replay.status_code == 200
@@ -232,17 +249,76 @@ def test_replay_still_checks_authorization(seeded):
     assert counts(s) == (1, 1)
 
 
-def test_replay_reads_current_processing_state_without_processing(seeded):
+def test_replay_reads_current_processing_state_without_processing(seeded, mark_message_failed):
     s = seeded
     first = send(s)
     with s.db.begin() as c:
-        c.execute(update(m.messages).values(processing_status="FAILED"))
+        mark_message_failed(c, UUID(first.json()["student_message_id"]))
     r = send(s)
     assert r.status_code == 200
     assert r.json() == {
         "student_message_id": first.json()["student_message_id"],
         "status": "FAILED",
     }
+    assert counts(s) == (1, 1)
+
+
+@pytest.mark.parametrize("session_status", ["ACTIVE", "CLOSED"])
+def test_failed_replay_returns_200_without_processing_writes(
+    seeded, session_status, mark_message_failed
+):
+    s = seeded
+    first = send(s)
+    assert first.status_code == 201
+    message_id = UUID(first.json()["student_message_id"])
+    with s.db.begin() as c:
+        mark_message_failed(c, message_id)
+        c.execute(
+            update(m.coaching_sessions)
+            .where(m.coaching_sessions.c.id == s.ids["session"])
+            .values(
+                status=session_status,
+                closure_reason="NORMAL" if session_status == "CLOSED" else None,
+            )
+        )
+
+    def stored_operation():
+        with s.db.connect() as c:
+            return (
+                c.execute(select(m.messages)).all(),
+                c.execute(select(m.idempotency_records)).all(),
+                c.execute(select(m.message_processing_jobs)).all(),
+                c.execute(select(m.coaching_sessions)).all(),
+            )
+
+    before = stored_operation()
+
+    def reject_processing_write(conn, cursor, statement, parameters, context, executemany):
+        # Replay may lock/read rows, but must not insert work or update processing state.
+        # Trap writes to jobs/counters as well as messages; no worker is running.
+        assert not (context.isinsert or context.isupdate or context.isdelete)
+        assert statement.lstrip().split(None, 1)[0].upper() not in {
+            "INSERT",
+            "UPDATE",
+            "DELETE",
+            "MERGE",
+            "CALL",
+            "WITH",
+        }
+
+    event.listen(s.db, "before_cursor_execute", reject_processing_write)
+    try:
+        for _ in range(2):
+            replay = send(s)
+            assert replay.status_code == 200
+            assert replay.json() == {
+                "student_message_id": str(message_id),
+                "status": "FAILED",
+            }
+    finally:
+        event.remove(s.db, "before_cursor_execute", reject_processing_write)
+
+    assert stored_operation() == before
     assert counts(s) == (1, 1)
 
 
@@ -272,10 +348,12 @@ def test_concurrent_duplicate_requests(seeded):
 def test_database_unique_constraint_protects_without_service_lock(seeded):
     s = seeded
     send(s)
-    with pytest.raises(IntegrityError):
+    with pytest.raises(IntegrityError, match="uq_idempotency_scope"):
         with Session(s.db).begin() as tx:
             repo = MessageRepository(tx.session)
-            message_id = repo.insert_message(s.ids["session"], "duplicate", None)
+            sequence = repo.allocate_sequence(s.ids["session"])
+            message_id = repo.insert_message(s.ids["session"], "duplicate", None, sequence)
+            repo.insert_processing_job(message_id)
             repo.associate_key(s.ids["student"], "send-1", message_id)
     assert counts(s) == (1, 1)
 
@@ -450,3 +528,69 @@ def test_concurrent_same_key_different_payload(seeded):
         replies = list(pool.map(submit, ["first content", "second content"]))
     assert sorted(r.status_code for r in replies) == [201, 409]
     assert counts(s) == (1, 1)
+
+
+@pytest.mark.parametrize(
+    "boundary", ["allocate_sequence", "insert_message", "insert_processing_job", "associate_key"]
+)
+def test_admission_rolls_back_every_coupled_write(seeded, monkeypatch, boundary):
+    s = seeded
+    original = getattr(MessageRepository, boundary)
+
+    def fail_after_write(repo, *args):
+        original(repo, *args)
+        raise SQLAlchemyError("injected admission write failure")
+
+    monkeypatch.setattr(MessageRepository, boundary, fail_after_write)
+    assert send(s).status_code == 503
+    assert counts(s) == (0, 0)
+    with s.db.connect() as c:
+        assert (
+            c.scalar(
+                select(m.coaching_sessions.c.next_message_sequence).where(
+                    m.coaching_sessions.c.id == s.ids["session"]
+                )
+            )
+            == 1
+        )
+    monkeypatch.setattr(MessageRepository, boundary, original)
+    assert send(s).status_code == 201
+    with s.db.connect() as c:
+        assert c.scalar(select(m.messages.c.session_sequence)) == 1
+    assert counts(s) == (1, 1)
+
+
+def test_concurrent_distinct_admissions_allocate_unique_session_sequences(seeded):
+    s = seeded
+    barrier = Barrier(6)
+
+    def submit(n):
+        with TestClient(s.app) as client:
+            barrier.wait(timeout=10)
+            return client.post(
+                s.url,
+                json={"content": f"Distinct input {n}"},
+                headers={
+                    "Authorization": "Bearer " + s.tokens["student"],
+                    "Idempotency-Key": f"distinct-{n}",
+                },
+            )
+
+    with ThreadPoolExecutor(max_workers=6) as pool:
+        results = list(pool.map(submit, range(6)))
+    assert all(r.status_code == 201 for r in results)
+    assert len({r.json()["student_message_id"] for r in results}) == 6
+    assert counts(s) == (6, 6)
+    with s.db.connect() as c:
+        assert c.scalars(
+            select(m.messages.c.session_sequence).order_by(m.messages.c.session_sequence)
+        ).all() == list(range(1, 7))
+        assert (
+            c.scalar(
+                select(m.coaching_sessions.c.next_message_sequence).where(
+                    m.coaching_sessions.c.id == s.ids["session"]
+                )
+            )
+            == 7
+        )
+        assert set(c.scalars(select(m.message_processing_jobs.c.attempt_count))) == {0}

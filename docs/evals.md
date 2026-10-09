@@ -10,7 +10,7 @@ Future verification must exercise observable guarantees, not merely implementati
 | Contract | Required verification |
 | --- | --- |
 | Durable input/output | Retrieval/model/tool failure cannot erase committed input; no tutor result is returned before its output and logically coupled state commit. |
-| Send idempotency | Same student/operation/key and payload returns current PENDING/PROCESSING/COMPLETED/FAILED state without new processing/input; changed payload conflicts and preserves original. |
+| Send idempotency | Same student/operation/key and payload returns HTTP 200 with the original message ID and current PENDING/PROCESSING/COMPLETED/FAILED state without new input, job scheduling, or processing attempts; changed payload conflicts and preserves original. Verify FAILED replay is read-only in both ACTIVE and CLOSED sessions. Genuine backend unavailability remains 503. |
 | Explicit retry | Reprocess existing eligible FAILED input without new student message; duplicate send is not retry. |
 | Ownership/recovery | Concurrent and recovered runs cannot produce competing tutor responses or duplicate durable actions. |
 | Durable action idempotency | Automatic/explicit retry and stale recovery reuse successful logical evidence, POC, attempt, escalation, and other effects. |
@@ -142,6 +142,18 @@ Evals answer “Is the Tutor behaving well?” Observability answers “Is the T
 
 Verify real PostgreSQL migration/admission/rollback and duplicate concurrency behavior, not SQLite substitutes: PENDING commit, exact content, authenticated identity, protected lookup, enrollment/assignment eligibility and consistency, CLOSED new-send rejection versus replay, key validation, current-state replay, changed-content conflict, and no client identity override. Test transaction failure both between coupled writes and at commit; inspect database state through a separate connection. Verify metadata-only logging and safe validation errors. No AI eval is applicable to this slice.
 
+## STEP5-001-A1 verification obligations
+
+- Verify admission commits input/idempotency before background work and returns without waiting for tutor completion.
+- Verify admitted work survives API/worker lifecycle interruption through PostgreSQL durability; preserve valid-owner and stale-owner guarantees.
+- Verify GET authentication, resource authorization, non-disclosure, current durable state, committed-output-only delivery, and no processing or learning-state side effects.
+- Preserve POST replay and explicit-retry distinctions, including CLOSED.
+- Verify CLOSED sessions reject new messages; admitted work may finish and authorized reads remain available. Message COMPLETED alone must not close a session or update authoritative mastery.
+- Verify new-session context retains original provenance and authorized scope without an unrestricted history dump.
+- Verify metadata-first correlation across admission, worker, and GET.
+
+These obligations span multiple slices. SLICE2A-001 resolved GET failure mapping; Stages 3–6 verify the implemented worker/admission/polling boundaries. New-session context and other unimplemented product flows remain future obligations, not tested capabilities.
+
 ## Deferred evaluation and tooling decisions
 
 TODO / UNRESOLVED: numeric release thresholds; exact calibrated progress/transfer/confidence/escalation rubrics; exact POC taxonomy/labeling rubric and reviewer-agreement criteria; concrete datasets/reference cases and slice coverage using the approved Step 9 dimensions; sample/repeat policy; judge-reliability acceptance criteria; baseline approval; exact formatting/lint/type-check tools and commands; evaluation runner/configuration; performance budgets beyond approved runtime defaults. Do not change criteria merely to make failures pass. Evaluation acceptance decisions require human approval.
@@ -149,3 +161,53 @@ TODO / UNRESOLVED: numeric release thresholds; exact calibrated progress/transfe
 ## Reporting
 
 Report actual commands/checks, versions/evidence, observed outcomes, regressions, uncertainty, and what was not run with reasons/risks. Deterministic test results and probabilistic eval results must be clearly distinguished. Run the repository contract-check workflow and provide a concise handoff after implementation. Documentation synchronization is not runtime verification.
+
+## Slice 2a staged verification — SLICE2A-001
+
+Stage 1 must run real PostgreSQL tests for migration/metadata parity, deferred message/job/result shapes, immutable input, unique reply/same-session/student source, unique PROCESSING session under contention, closure reasons, attempt/error checks, backfill preservation and cancellation, ambiguous-history rejection, transactional migration rollback, and guarded downgrade. Explicitly test old admission rejection on 0002; Stage 1 is not deployable with old admission. SQLAlchemy metadata comparison alone does not verify triggers.
+
+Later stages must preserve FAILED replay=200 with no scheduling, add atomic message/job/key/counter admission, session FIFO/backoff/FAILED barriers, ownership/lease/stale completion, crash and shutdown injection, read-only authenticated GET, safe failures, and metadata privacy. Existing fixtures that directly write FAILED/CLOSED must be updated to valid coupled data without weakening public assertions. No live-model eval is applicable to Stage 1.
+
+Stage 2 verification adds rollback injection after sequence allocation, message insertion, job insertion, and key association; concurrent distinct-send sequence allocation; and HTTP replay/new-send against a real 0001→0002 backfill. FAILED replay snapshots jobs and session counters as well as input/key records, while trapping writes. Fixture corrections preserve existing HTTP/privacy/authorization/idempotency assertions; they do not disable constraints or simulate a worker. Exact executed results and the 18-failure classification are in handoffs/slice2a-stage2.md.
+
+
+Stage 3 verification adds 55 real-PostgreSQL worker cases covering separate-process claims,
+locked heads, retry/FAILED barriers, independent heartbeat, expiry and fixed deadlines,
+stale tokens/generations, authorization/closure cancellation, single-response completion,
+rollback and uncertain acknowledgement, bounded transient retries, sanitized failures,
+shutdown and database backoff. The complete suite passed 164 tests. These deterministic
+processor tests make no claim about model quality. See handoffs/slice2a-stage3.md.
+
+Stage 4 adds 11 deterministic model-adapter tests: exact synthetic response preservation,
+invalid output rejection without coercion/retry, cancellation propagation, PostgreSQL
+completion/replay, and each known transient failure exhausting the existing two-claim
+budget with FAILED replay remaining read-only. The full suite passed 175 tests. No live
+provider or tutoring-quality eval is claimed; see handoffs/slice2a-stage4.md.
+
+Stage 5 adds 23 PostgreSQL polling cases: all five states and exact safe envelopes,
+no-store responses, missing/invalid/duplicate credentials, teacher/other-student denial,
+non-discoverable and mismatched/tutor resources, malformed UUIDs, disabled/revoked access,
+historical reads after closure or loss of new-work eligibility, safe storage/invariant errors,
+and worker completion between snapshot acquisition and delivery. SQL capture verifies one
+read query and no DML. Full suite: 198 passed; details in handoffs/slice2a-stage5.md.
+
+
+## Slice 2a Stage 6 — Integration acceptance evidence
+
+Stage 6 implements the previously authorized PostgreSQL integration/failure-injection
+validation, with the human's explicit end-to-end scenario list. No new behavior or numeric
+acceptance threshold is inferred. The authoritative invariants remain SLICE2A-001,
+requirements §§22.1–22.4/Slice 2a, architecture §31.8, schema §31.6, ai-runtime's worker
+contract, security's execution/read authorization, and the API polling/replay contract.
+
+`tests/test_async_lifecycle.py` adds 19 cases through actual POST/GET handlers, service and
+repository transactions, migrated PostgreSQL, worker, and configured FakeModelClient.
+The complete suite passed 217 tests in 18.01s. Existing tests retain admission rollback,
+heartbeat/deadline, independent-process claim contention, schema, privacy, and error coverage.
+See `handoffs/slice2a-stage6.md` for each requested scenario mapped to test evidence.
+
+An actual spawned worker is terminated after committing a claim and entering its fake model.
+Its persisted timestamps are then shifted to exercise expiry without a 45-second test wait.
+Existing heartbeat/timeout tests use shortened compatible settings; no claim is made about
+production scheduling, real provider cancellation, load, or external model quality. PostgreSQL
+constraints remain enabled. No assertions, retry policy, or contract criteria were weakened.

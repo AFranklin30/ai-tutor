@@ -21,6 +21,12 @@ Apply the same discoverability rule to session/message sends, reads, replays/ret
 
 Never reveal ownership as part of a protected denial. Internal logging may retain the real authorization reason. Replay/retry still requires authorization and cannot bypass these boundaries.
 
+### Asynchronous worker and polling — STEP5-001-A1
+
+Authenticated message-status GET applies the same protected-resource rules to the original message/session/course on every read. Knowledge of a message identifier is not authorization. Authorized CLOSED-session reads do not grant permission for new work or explicit retry. Expose only approved student-safe state/output, not worker internals.
+
+Worker deployment does not grant model or tool authority. Background execution uses trusted backend context and existing service-level authorization/policy boundaries. New-session context selection remains minimal and authorized. Worker credential provisioning is operational configuration, not a new student identity or permission mechanism.
+
 ## Model, tool, curriculum, and data authority
 
 LLM proposals are untrusted. The deterministic backend validates output, tool names/arguments, trusted identity/context, permission, and current state before execution. Tools are allow-listed and state-dependent. No direct model database, raw SQL, arbitrary network, filesystem, or official mastery authority exists.
@@ -122,3 +128,9 @@ The implementation stores only credential digests in server-side configuration a
 MVP uses synthetic/demo student data, not approved real-minor production records. Demo data remains until an approved intentional reset/deletion process; no production retention schedule is implied. Synthetic operation is not permission for careless logging or unrestricted data sharing. Do not persist unnecessary sensitive/raw data for observability.
 
 TODO / UNRESOLVED: production authentication/credential/session mechanism beyond Slice 1 demo mapping; additional role/relationship lifecycle permissions; production privacy, consent, retention, deletion, provider-sharing, audit, secrets/key-management policies; age-specific behavior; accessibility in demo and production; future training/fine-tuning use. Teacher feedback does not automatically retrain models. These must be approved before dependent implementation/use; no defaults are implied.
+
+## Slice 2a execution authorization — SLICE2A-001
+
+Recheck enabled account, active enrollment, eligible/consistent coursework, and closure at claim, renewal, and completion. NORMAL CLOSED permits previously admitted work; ADMINISTRATIVE/UNKNOWN CLOSED, disabled accounts, or revoked enrollment prevent further processing/completion and cancel unfinished work through trusted services. Unknown reasons fail closed. Revocation/closure writers coordinate user → session → authorization rows → message → job locks; output committed before revocation remains history. No model or client can supply cancellation authority.
+
+No new student-facing explicit retry endpoint in Slice 2a. Future eligibility is restricted to known transient provider/infrastructure failures under current authorization, ACTIVE session, retry budgets and rate limits; invalid output, authorization, policy, invalid-request and unknown failures are excluded. Read-only POST replay stays 200 for FAILED. GET status authorizes each read and never exposes claims, internal failures, or unauthorized cancellation state.

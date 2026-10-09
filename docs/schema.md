@@ -365,7 +365,7 @@ Conceptual fields:
 -   `created_at`
 -   `updated_at`
 
-Approved ordinary student closure is ACTIVE → CLOSED. Closure prevents new work; previously admitted PENDING/PROCESSING work may finish. A FAILED message in CLOSED cannot begin explicit retry, while authorized historical replay remains available without processing. No additional session states/transitions or expiration duration are selected. Start New atomically closes the old ACTIVE session and creates a new ACTIVE session; either both succeed or neither does.
+Approved ordinary student closure is ACTIVE → CLOSED. Closure prevents new work; previously admitted PENDING/PROCESSING work may finish under NORMAL closure with current authorization; SLICE2A-001 requires cancellation for administrative/unknown closure. A FAILED message in CLOSED cannot begin explicit retry, while authorized historical replay remains available without processing. No additional session states/transitions or expiration duration are selected. Start New atomically closes the old ACTIVE session and creates a new ACTIVE session; either both succeed or neither does.
 
 A coaching session belongs to one student.
 
@@ -409,9 +409,9 @@ Recommended access index:
 
 ### Message processing and correlation
 
-Student input and tutor response are separate persisted messages. The tutor response is traceable to its source student message; public identifiers are `student_message_id` and `tutor_message_id`. Student processing metadata uses PENDING → PROCESSING → COMPLETED or FAILED and may change without rewriting historical content.
+Student input and tutor response are separate persisted messages. The tutor response is traceable to its source student message; public identifiers are `student_message_id` and `tutor_message_id`. Student processing metadata uses PENDING → PROCESSING → COMPLETED or FAILED, with CANCELLED added by SLICE2A-001; metadata may change without rewriting historical content.
 
-Only one active run owns a message. Stale processing must be detectable/recoverable; competing runs cannot create competing responses or duplicate effects. Conceptual processing state, recovery metadata, and response correlation are required; no new physical column/table, lock, lease, queue, or worker design is selected here.
+Only one active run owns a message. Stale processing must be detectable/recoverable; competing runs cannot create competing responses or duplicate effects. Conceptual processing state, recovery metadata, and response correlation are required. STEP5-001-A1 selects a separate PostgreSQL-backed worker; committed student messages and processing state remain the durable work source. That deployment decision alone selected no physical schema; SLICE2A-001 and §31.6 now approve the job table, constraints, indexes, and migration. GET polling reads durable state/results without creating work. New-session context may reference authorized prior records without moving or rewriting their original session/message provenance. Session states remain ACTIVE/CLOSED; SLICE2A-001 extends message states to PENDING/PROCESSING/COMPLETED/FAILED/CANCELLED.
 
 ## 12. Student Attempts
 
@@ -1004,7 +1004,7 @@ Course / Unit / Lesson
 
 Approval: `decisions.md` STEP5-002 and STEP5-003. This section adds conceptual guarantees, not physical tables/columns or locking designs.
 
-Only the currently valid processing owner may finalize a student message. Once ownership transfers, stale former owners cannot commit competing final results. Stale/dead ownership must be detectable and recoverable; a PROCESSING label alone does not prove liveness. Exact leases/timestamps/tokens/locks or alternatives remain deferred.
+Only the currently valid processing owner may finalize a student message. Once ownership transfers, stale former owners cannot commit competing final results. Stale/dead ownership must be detectable and recoverable; a PROCESSING label alone does not prove liveness. SLICE2A-001 now specifies leases/timestamps/tokens/locks for this slice; see §31.6 and ai-runtime.md.
 
 Recovery resumes/restarts from the last durable committed state. Uncommitted model output is non-authoritative and need not be reconstructed. Preserve correlation to committed message/attempt/evidence/tool effects; reuse a successful logical side effect on retry/recovery and permit retry of an unsuccessful/uncommitted effect only under approved rules. Do not interpret an overall failed turn as proof that every tool write failed.
 
@@ -1046,6 +1046,64 @@ A per-student transaction row lock serializes competing sends across sessions; s
 
 Earlier UUID, idempotency storage, and allocation deferrals are resolved for this slice only; future class/group allocation and unrelated physical schema decisions remain deferred.
 
+## 31.6 Slice 2a approved physical processing contract
+
+Approval: decisions.md SLICE2A-001. This supersedes the physical worker deferrals in §11/§31.1 for this slice. messages.processing_status is the only status; jobs have no status column. Message states are PENDING / PROCESSING / COMPLETED / FAILED / CANCELLED. Session states remain ACTIVE / CLOSED.
+
+### Columns and constraints
+
+coaching_sessions adds next_message_sequence BIGINT NOT NULL DEFAULT 1, positive; closure_reason VARCHAR(24) NULL DEFAULT NULL. ACTIVE requires NULL; CLOSED requires NORMAL, ADMINISTRATIVE, or UNKNOWN. Existing CLOSED sessions backfill UNKNOWN without inferring completion from ended_at.
+
+messages adds session_sequence BIGINT NULL DEFAULT NULL and in_reply_to_message_id UUID NULL DEFAULT NULL. Students require positive sequence and no reply target; tutors require no sequence, a student reply target in the same session, and COMPLETED status. UNIQUE(session_id, session_sequence), UNIQUE(id, session_id), UNIQUE(in_reply_to_message_id), and restrictive composite reply FK (in_reply_to_message_id, session_id) → messages(id, session_id). Partial UNIQUE(session_id) for student PROCESSING prevents competing processing rows. Message identity/content/provenance is immutable and messages cannot be deleted through ordinary DML.
+
+message_processing_jobs columns (all timestamps TIMESTAMPTZ):
+
+| Column | Type | Nullable | Default |
+| --- | --- | --- | --- |
+| message_id | UUID PK, restrictive FK messages.id | No | none |
+| attempt_count | INTEGER | No | 0 |
+| cycle_attempt_count | INTEGER | No | 0 |
+| max_attempts | INTEGER | No | 2 |
+| retry_generation | INTEGER | No | 0 |
+| claim_token | UUID | Yes | NULL |
+| worker_instance_id | UUID | Yes | NULL |
+| claimed_at | TIMESTAMPTZ | Yes | NULL |
+| lease_expires_at | TIMESTAMPTZ | Yes | NULL |
+| attempt_deadline_at | TIMESTAMPTZ | Yes | NULL |
+| next_attempt_at | TIMESTAMPTZ | Yes | clock_timestamp() |
+| last_error_code | VARCHAR(64) | Yes | NULL |
+| last_error_at | TIMESTAMPTZ | Yes | NULL |
+| cancel_reason | VARCHAR(32) | Yes | NULL |
+| finished_at | TIMESTAMPTZ | Yes | NULL |
+| created_at | TIMESTAMPTZ | No | clock_timestamp() |
+| updated_at | TIMESTAMPTZ | No | clock_timestamp(); application updates on mutation |
+
+Checks: attempt_count >= cycle_attempt_count >= 0; max_attempts >= 1; cycle_attempt_count <= max_attempts; retry_generation >= 0. Error code/time are both NULL or both populated. Error vocabulary: MODEL_TIMEOUT, MODEL_UNAVAILABLE, MODEL_RATE_LIMITED, MODEL_INVALID_OUTPUT, MODEL_CONFIGURATION, POLICY_REJECTED, PROCESSING_ERROR, LEASE_EXPIRED, DATABASE_FAILURE. Cancellation vocabulary: ACCOUNT_DISABLED, ENROLLMENT_REVOKED, COURSEWORK_INELIGIBLE, SESSION_ADMIN_CLOSED, SESSION_CLOSURE_UNKNOWN. No raw exception/content storage in jobs.
+
+Exactly one job per student message, none per tutor; deferred constraint triggers check final transaction state, including message/job changes and tutor-response relationships:
+
+| Status | Required committed job/result shape |
+| --- | --- |
+| PENDING | next_attempt_at present; token, worker ID, claim timestamp, lease, deadline, cancellation, finished_at NULL; no response |
+| PROCESSING | token, worker ID, claim timestamp, lease and deadline present; claimed_at < lease_expires_at <= attempt_deadline_at; next_attempt_at, cancellation, finished_at NULL; no response |
+| COMPLETED | exactly one correlated tutor response; winning token and finished_at present; lease/deadline/scheduling/cancellation NULL |
+| FAILED | error code/time and finished_at present; lease/deadline/scheduling/cancellation NULL; no response |
+| CANCELLED | cancel_reason and finished_at present; token/lease/deadline/scheduling NULL; no response |
+
+Prior error metadata may survive retries; terminal claim metadata may remain except cancelled tokens. It never defines a second status. Cross-table checks lock the source message to serialize consistency validation. Runtime services must still follow user → session → authorization rows → message → job lock order, reauthorize, and fence claims. Triggers do not implement claims, retries, cancellation services, or new admission automatically.
+
+Allowed student transitions: initial PENDING; PENDING → PROCESSING/CANCELLED; PROCESSING → PENDING/COMPLETED/FAILED/CANCELLED; FAILED → PROCESSING/CANCELLED. COMPLETED/CANCELLED are terminal. Same-state updates preserve permitted metadata; user content/provenance cannot change. Future explicit retry increments retry_generation and resets cycle_attempt_count, not lifetime attempt_count.
+
+Indexes: (session_id, session_sequence) on unresolved student PENDING/PROCESSING/FAILED; unique PROCESSING session; jobs(next_attempt_at, message_id) WHERE next_attempt_at IS NOT NULL; jobs(lease_expires_at, message_id) WHERE lease_expires_at IS NOT NULL. Existing session/created index remains.
+
+### Migration and deployment boundary
+
+Revision 0002 requires a maintenance window: stop admission and workers, back up, then migrate transactionally with source-table locks. Reject existing non-PENDING or tutor messages and inconsistent legacy idempotency relationships; do not fabricate processing history. Backfill per-session student sequence by (created_at, id), set counters to max+1, and create one job per input. Only ACTIVE, enabled STUDENT accounts with active enrollment and consistent eligible coursework stay PENDING. Unknown CLOSED, disabled accounts, revoked enrollment, or ineligible coursework become CANCELLED with controlled reason; preserve content and idempotency.
+
+Validate every backfilled message before committing. Failure rolls back DDL and data together. Downgrade is deliberately restricted to an empty messages table; populated databases require coordinated backup restore or a reviewed forward migration rather than destroying processing/provenance data.
+
+Stage 1 did not update admission. Stage 2 now allocates the session sequence and atomically creates message + job + key + counter update in the existing service-owned transaction; replay performs none of those writes. Old admission remains incompatible with 0002 and must not be mixed with it. Slice 1 FAILED/CLOSED test setup now supplies valid coupled metadata and closure reasons without relaxing production constraints or public assertions. These stages are accepted for continued development only, not deployment.
+
 ## 32. Unresolved Schema Decisions
 
 The following remain unresolved and must not be silently invented during
@@ -1063,14 +1121,14 @@ implementation:
 -   additional coaching-session states/transitions beyond approved ACTIVE → CLOSED;
 -   exact escalation actions after review and session resume behavior;
 -   idempotency details outside Slice 1 storage, content comparison, 200 replay, and demo-lifetime retention;
--   exact physical processing ownership/recovery mechanism;
+-   physical durable tool-action mechanisms beyond approved Slice 2a processing ownership/recovery;
 -   exact physical mastery-history and teacher-feedback representation;
 -   class/group coursework allocation beyond approved Slice 1 explicit individual eligibility;
 -   exact production deletion/retention behavior;
 -   exact production audit requirements;
 -   exact accessibility-related persisted preferences/data;
 -   exact age-policy-related persisted fields;
--   exact enum implementation strategy;
+-   enum implementation outside the approved Slice 2a VARCHAR/check constraints;
 -   exact cascade/restrict/soft-delete behavior where downstream policy
     is required.
 
