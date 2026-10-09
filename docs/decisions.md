@@ -117,7 +117,7 @@ Approval source: the human request “Synchronize the AI Tutor repository docume
   - PostgreSQL remains the durable source of admitted work, processing state, and committed results. Work must survive API/worker process loss without depending on an in-memory task or external notification.
   - Separately exclude a dedicated queue service or message broker. Do not introduce Redis, Celery, RabbitMQ, or Kafka. A logical backlog in PostgreSQL is not a dedicated queue service.
   - POST commits input and its idempotency record before returning the admission response. Background processing starts only after that commit.
-  - Clients initially poll authenticated GET /api/v1/coaching/messages/{message_id} for current status and committed student-safe output; message_id identifies the student message. POST replay remains available for uncertain send outcomes, not normal polling.
+  - Clients initially poll authenticated GET /api/v1/coaching/sessions/{session_id}/messages/{message_id}/status for current status and committed student-safe output; message_id identifies the student message. POST replay remains available for uncertain send outcomes, not normal polling.
   - Completed learning sessions remain CLOSED to new messages. Students continue through new eligible sessions with minimum relevant authorized prior context. Message COMPLETED does not itself close a session or establish official mastery.
   - Separate admission from slower processing while retaining durable input and the existing database. This addresses the asynchronous workflow, not a measured capacity bottleneck.
 - Alternatives considered:

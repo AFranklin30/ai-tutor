@@ -122,6 +122,7 @@ to the repository root.
 ## ADR-012 — PostgreSQL-backed asynchronous processing
 
 - **Status:** Approved roadmap, STEP5-001-A1 and SLICE2A-001; Stages 1–2 persistence and compatible admission implemented; worker processing remains unimplemented.
+- **Superseded or resolved by:** ADR-014 and decisions.md SLICE2A-001. The Slice 2 worker and lease mechanisms described as unimplemented above are built: ordered claims, lease/heartbeat renewal, fixed deadlines, recovery, and stale-owner fencing. Production model provider and deployment platform remain unresolved.
 - **Context/problem:** Admission must become durable before expensive tutoring work, and the stable baseline must remain usable while future processing is explored.
 - **Decision:** Slice 1 stops at PENDING. Plan Slice 2 asynchronous processing on feat/async-message-processing; later work must honor approved ownership, retry, recovery, and commit guarantees.
 - **Rationale:** Separates current proven admission from future AI behavior and preserves a reviewable main baseline.

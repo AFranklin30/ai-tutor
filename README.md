@@ -10,10 +10,12 @@ identify confusion, offer appropriate scaffolding, and verify learning rather th
 supply answers. Students are the primary learners; teachers retain instructional judgment
 and authority over official mastery.
 
-**Current status: Slice 1 — Student Message Admission is implemented.** The repository
-contains the backend foundation and approved system-design contracts. It does not yet
-generate tutoring responses or provide a frontend. Development currently uses synthetic
-student data in a controlled local demo; production use with children's records is not approved.
+**Current status: Slice 2a asynchronous message processing is implemented for review.**
+The repository contains the backend foundation, the PostgreSQL-backed worker, the
+deterministic model-client boundary, authenticated status polling, and the approved
+system-design contracts. It does not yet call a production model provider or provide a
+frontend. Development currently uses synthetic student data in a controlled local demo;
+production use with children's records is not approved.
 
 ## Problem and goals
 
@@ -104,7 +106,8 @@ The GitHub repository is private initially.
 ## Message admission contract
 
 Implemented: `POST /api/v1/coaching/sessions/{session_id}/messages` through PostgreSQL commit.
-New input is `PENDING`; no AI processing exists. This is a synthetic/local demo.
+New input starts `PENDING`; the Slice 2a worker then processes it with a deterministic model
+fake. Production model integration is not implemented. This is a synthetic/local demo.
 
 ## Local setup
 
