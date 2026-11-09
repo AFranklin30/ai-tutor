@@ -1031,3 +1031,15 @@ but must not independently approve changes to:
 
 Approved architecture changes should update this document and, where
 significant, `decisions.md`, followed by contract consistency review.
+
+## Offline tutor evaluation v1 — OFFLINE-EVAL-001
+
+Approval: decisions.md OFFLINE-EVAL-001. `experiments/tutor_v1` is a standalone local Python module, outside `ai_tutor` packaging and runtime imports. CLI → fixed synthetic cases/context selection/local budget → fake client or explicitly selected OpenAI Responses HTTP client → structural validation → local JSONL review artifact. No database, migrations, API endpoints, worker injection, tools, progress/evidence/mastery writes or student delivery. Existing backend/worker/public API and retries remain unchanged. Standard-library HTTP avoids a new SDK/runtime dependency. The default CLI mode and deterministic tests use the fake; paid mode alone reads OPENAI_API_KEY.
+
+### Local offline evaluation option — OFFLINE-EVAL-003
+
+`experiments/tutor_v1/local.py` is a separate explicit CLI/adapter; the existing runner's fake default and Luna transport remain. It reuses the canonical synthetic context serializer, prompt, fixtures and exact reply validator; uses independently justified Qwen input admission; starts and owns a dedicated Ollama process on 127.0.0.1:11435; inspects installed metadata; submits one `/api/chat` per admitted case; verifies loaded context/digest via `/api/ps`; writes new local JSONL evidence; and terminates its server. No runtime package/dependency, API, database or worker integration. Ollama is an approved external local experiment prerequisite, installed separately. The evaluation CLI never installs/pulls models or falls back to another transport. Preparation requires internet; generation must be checked separately while disconnected. See decisions.md OFFLINE-EVAL-003 and `experiments/tutor_v1/LOCAL_SETUP.md`.
+
+### Focused repeatability preparation — OFFLINE-EVAL-005
+
+`experiments/tutor_v1/repeatability.py` is an isolated local/fake CLI. Preparation creates a fresh exclusive plan directory with a manifest, reproducible thirty-slot schedule, separate version mapping and pending label-masked review view. Explicit run reads and validates that immutable plan, exclusively creates a different output directory, and reuses the existing local adapter and owned loopback/cloud-disabled server or a mechanics-only fake. It writes raw sample evidence and a separate review view without importing backend/worker/API/database components. No SDK, dependency or infrastructure change; no paid mode. Existing CLIs, Luna support and default fake behavior are preserved. Review metadata and research material never enter model requests.

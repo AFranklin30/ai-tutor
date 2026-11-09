@@ -58,6 +58,18 @@ unless a current requirement justifies them.
 
 ------------------------------------------------------------------------
 
+## 2.1 Approved first-pilot scope — PILOT-EVAL-002
+
+Approval: current human seven-case preparation request, recorded 2026-10-19 in decisions.md PILOT-EVAL-002. The first pilot covers one-step equations using positive whole-number constants, coefficients and solutions. Negative numbers, explicit fractional-coefficient forms and decimals are deferred; included division notation is clarified below by PILOT-EVAL-003. This narrows the first pilot within the Grade 7 domain; the precise curriculum source and objectives remain unresolved.
+
+Generating new practice problems is outside this MVP. When asked for another equation after assigned work is completed, redirect to another assigned problem without generating one or inventing an available assignment. Section 8 related-problem/new-context verification examples apply only within authorized assigned/published coursework; they do not authorize generated practice. This preserves §22.1 eligibility and teacher/mastery authority.
+
+PILOT-EVAL-003 clarifies that written forms `x/d = b` with positive whole-number divisor and right-hand side are included. Explicit fractional-coefficient forms remain deferred; algebraic rewriting does not exclude the approved division or subtraction examples. Other original first-pilot limits remain unchanged.
+
+The seven original approved cases remain in `experiments/datasets/pilot-one-step-v1.json`. Clarified version `pilot-one-step-v2.json` adds the approved exact synthetic history for the tutor-supplied step, without changing expectations or the other six cases. Missing-problem and practice-request cases test boundaries rather than introduce new mathematical content. The v1-prompt, three-attempts-per-case diagnostic plan is not final pilot acceptance; see evals.md PILOT-EVAL-003.
+
+------------------------------------------------------------------------
+
 ## 3. Primary Users
 
 ### Student
@@ -675,3 +687,15 @@ Approved requirement changes should:
 Oldest accepted unresolved student message first; at most one PROCESSING per session. Retry backoff and FAILED remain ordering barriers. Permanently nonretryable FAILED is not silently skipped; continuation uses a new eligible session, without implementing cross-session memory. COMPLETED/CANCELLED release the barrier only under valid authorization. Student message completion never closes a learning session.
 
 NORMAL closure permits admitted work; administrative/unknown closure cancels unfinished work. Disabled accounts or revoked enrollment prevent further processing and completion. Future explicit retries are limited to known transient provider/infrastructure failures with authorization, ACTIVE session, budgets and rate limits; no student-facing retry endpoint in Slice 2a. Idempotent replay never schedules work and returns 200 for stored FAILED.
+
+## Offline tutor evaluation v1 — OFFLINE-EVAL-001
+
+Approval: decisions.md OFFLINE-EVAL-001. Implement the first isolated synthetic evaluation using the human-supplied tutor prompt v1 and twelve expected behaviors. Grade 7 Mathematics and `3x = 36` apply where context is available; missing/ambiguous cases retain those conditions. Preserve the existing backend, worker and public API. Experimental replies never enter student-facing processing or change progress/mastery. Fake-client mechanics run first; paid model execution is explicit, separate and requires a later human request. Human review, not JSON validation, evaluates mathematical/instructional quality; no release or improvement conclusion is approved.
+
+### Local offline evaluation option — OFFLINE-EVAL-003
+
+Approval: decisions.md OFFLINE-EVAL-003, human request dated 2026-10-18. Add an explicit Ollama local baseline using only the existing synthetic fixtures and `qwen3.5:4b-q4_K_M` (Q4_K_M mixed 4-bit compression), targeting a MacBook Air M1 with 16 GB unified memory. Preserve fake default, Luna adapter, prompt v1, twelve cases, context selection and six pending human-review dimensions. No backend/worker/public API/student-record changes. No hosted inference or paid API calls in local mode. One local twelve-case run is authorized after successful setup; no automatic reruns, retries, prompt tuning, timeout or budget reduction. Interactive installation and disconnected-internet verification may be completed manually when unavailable to the agent; report them as unverified until observed.
+
+### Focused prompt repeatability preparation — OFFLINE-EVAL-005
+
+The human request dated 2026-10-19 authorizes preparation and deterministic verification of a focused v1/v2 comparison on cases 3, 4, 5, 8 and 10, with three fresh samples per case/prompt and exactly thirty scheduled slots as the maximum generation-attempt budget. Repeats are distinct observations, never retries/replacements. Preserve all original prompts, fixtures, rubric, baseline evidence/reviews and existing isolation. Real-model execution and paid calls are prohibited during this preparation task. The experiment concerns variation on five known cases, not full regression coverage, held-out performance or generalization. Later promotion must revisit broader regression coverage. See decisions.md OFFLINE-EVAL-005 and the research record/plan.

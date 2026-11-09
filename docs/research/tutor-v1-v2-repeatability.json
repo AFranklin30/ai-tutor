@@ -1,0 +1,656 @@
+{
+  "record_type": "offline_tutor_repeatability_research_record",
+  "recorded_at": "2026-10-19T15:17:32.135759-05:00",
+  "research_question": "Does the evidence-attribution addition in prompt v2 reliably reduce unsupported claims about student reasoning?",
+  "exact_prompt_addition": "Distinguish who supplied each step. A valid mathematical method is not evidence that the student used it. A step suggested by the tutor is not evidence that the student independently chose it. If the student’s method is unknown, ask neutrally how they reached their answer.",
+  "prompts": {
+    "v1": {
+      "path": "experiments/tutor_v1/prompt.txt",
+      "version": "v1",
+      "sent_text_sha256": "f432e56a2a7f56caaab8e12fbe7c01c15bcca19f5495bd4413cf4ba91ff16bed"
+    },
+    "v2": {
+      "path": "experiments/tutor_v1/prompt-v2.txt",
+      "version": "v2",
+      "sent_text_sha256": "30b322f8853bcd38249f5fee9c0aff4e1c17da00e9f0b19fbf3b982e25fa2714"
+    }
+  },
+  "dataset": {
+    "version": "v1",
+    "fixture_sha256": "e7426ff6b03cad516b8fcdb8a5d7c733fa31061cafb2c8a395a1945111fd9336",
+    "fixture_path": "experiments/tutor_v1/cases.py",
+    "original_cases": 12
+  },
+  "model": {
+    "record_type": "runtime",
+    "version": "0.40.6",
+    "model": "qwen3.5:4b-q4_K_M",
+    "digest": "d8b0f5e9760cd1682034f292d7ef72ec46f432149be0df7574bf2d6e92e38c04",
+    "quantization": "Q4_K_M",
+    "parameter_size": "4.2B",
+    "model_context_length": 262144,
+    "tokenizer": {
+      "tokenizer.ggml.model": "gpt2",
+      "tokenizer.ggml.pre": "qwen35"
+    },
+    "thinking_values": [
+      false,
+      true
+    ],
+    "model_parameters": "presence_penalty               1.5\ntemperature                    1\ntop_k                          20\ntop_p                          0.95",
+    "renderer": null,
+    "parser": null,
+    "template_source": null,
+    "template_sha256": "b507b9c2f6ca642bffcd06665ea7c91f235fd32daeefdf875a0f938db05fb315",
+    "model_size_bytes": 3324173934,
+    "server_controls": "cloud disabled and loopback binding verified in owned server log"
+  },
+  "generation_settings": {
+    "provider": "Ollama local",
+    "model": "qwen3.5:4b-q4_K_M",
+    "api": "/api/chat",
+    "host": "127.0.0.1:11435",
+    "cloud_disabled": true,
+    "think": false,
+    "num_ctx": 12288,
+    "max_input_tokens": 8000,
+    "num_predict": 1000,
+    "history_exchanges": 10,
+    "timeout_seconds": 30,
+    "retries": 0,
+    "stream": false,
+    "keep_alive": "5m",
+    "sampling": "installed model defaults; parameters captured in runtime record"
+  },
+  "sources": {
+    "v1": {
+      "generation": {
+        "path": "artifacts/tutor-v1-local-qwen35-first-disconnected.jsonl",
+        "sha256": "acb0f1aebba92e1c61ca54a24930f0b37a76b591f40f018de32143eb2193e7e8",
+        "started_at_as_recorded": "2026-10-19T04:19:59.342730+00:00"
+      },
+      "human_review": {
+        "path": "artifacts/tutor-v1-local-qwen35-first-human-review.json",
+        "sha256": "d9a7764e399efc3df43e4ce368eb5625bff5b2885bf4cff340bf5537c40ce688",
+        "recorded_at_as_recorded": "2026-10-18T23:59:36.396718-05:00",
+        "provenance": {
+          "description": "Assistant-proposed scores reviewed with the human in the planning chat, supplied in the current user request for preservation.",
+          "scoring_authority": "The exact supplied scoring table, with the explicit case 7 Teaching usefulness PASS resolution and case 4 mathematical-correctness caveat.",
+          "dimension_reason_provenance": "Dimension-specific reasons document the supplied judgments using the original replies, supplied context, and supplied chat-review notes. They do not assert additional human approvals.",
+          "planning_chat_review_timestamp": null,
+          "independent_reviewer_agreement": false,
+          "independent_reviewer_agreement_note": "This provenance is not independent reviewer agreement; no separate reviewer calibration or agreement was established."
+        }
+      }
+    },
+    "v2": {
+      "generation": {
+        "path": "artifacts/tutor-v2-local-qwen35-first-disconnected.jsonl",
+        "sha256": "4531fbfe9808475ff17f1cdebc312dde4b653e592b319faa078df331fa7836d1",
+        "started_at_as_recorded": "2026-10-19T05:10:10.312977+00:00"
+      },
+      "human_review": {
+        "path": "artifacts/tutor-v2-local-qwen35-first-human-review.json",
+        "sha256": "66de182f84230697de9f5fda213d0e03b0bc3befd2ab64b167f51ca2f5f339e6",
+        "recorded_at_as_recorded": "2026-10-19T00:32:00.906042-05:00",
+        "provenance": {
+          "description": "Assistant-proposed judgments reviewed and approved by the human in the planning chat; the complete approved 12×6 table and distinctions were supplied in the current user request for preservation.",
+          "approval_evidence": "Current user message explicitly states human approval of the complete supplied scoring table.",
+          "dimension_reason_provenance": "Dimension-specific reasons document the approved judgments using the original replies, supplied context and supplied distinctions; no additional human approvals are asserted.",
+          "planning_chat_review_timestamp": null,
+          "independent_reviewer_agreement": false,
+          "independent_reviewer_agreement_note": "This provenance is not independent reviewer agreement; no separate reviewer agreement or calibration is claimed."
+        }
+      }
+    }
+  },
+  "slices": {
+    "method_unknown": [
+      "03"
+    ],
+    "student_supplied_method": [
+      "04",
+      "10"
+    ],
+    "tutor_supplied_method": [
+      "08"
+    ]
+  },
+  "regression_case": {
+    "case_id": "05",
+    "finding": "V2 incorrectly rejected the correct answer 12 because the reported method was wrong."
+  },
+  "source_linked_observations": [
+    {
+      "case_id": "03",
+      "finding": "The v1 reply asserts that the student divided; v2 asks whether they divided. The approved review changes Evidence discipline from FAIL to PASS, while Teaching usefulness stays FAIL because the question remains leading.",
+      "sources": {
+        "v1": {
+          "generation_source": {
+            "path": "artifacts/tutor-v1-local-qwen35-first-disconnected.jsonl",
+            "line": 5,
+            "case_id": "03"
+          },
+          "review_source": {
+            "path": "artifacts/tutor-v1-local-qwen35-first-human-review.json",
+            "json_pointer": "/cases/2"
+          },
+          "reply": "Your answer is correct! Since you divided both sides by 3, that was a solid approach. How did you decide to divide both sides?",
+          "supplied_context": {
+            "grade": 7,
+            "subject": "Mathematics",
+            "authorized_problem": "Solve 3x = 36.",
+            "selected_history": [],
+            "current_student_message": "I got 12."
+          },
+          "approved_review": {
+            "Mathematical correctness": {
+              "judgment": "PASS",
+              "reason": "Confirming 12 as the solution to the supplied 3x = 36 is mathematically correct, and dividing both sides by 3 is a valid operation."
+            },
+            "Evidence discipline": {
+              "judgment": "FAIL",
+              "reason": "“Since you divided both sides by 3” invents a student method: the only supplied work is “I got 12.”"
+            },
+            "Context use": {
+              "judgment": "FAIL",
+              "reason": "It treats an answer-only message as if division steps had been supplied, rather than preserving the distinction between an answer and a demonstrated method."
+            },
+            "Teaching usefulness": {
+              "judgment": "FAIL",
+              "reason": "“How did you decide to divide both sides?” builds its method question on an unsupported assumption instead of asking neutrally how the student found 12."
+            },
+            "Adaptation": {
+              "judgment": "NOT_APPLICABLE",
+              "reason": "No earlier completed tutor-support exchange is supplied, so adaptation after prior support is not exercised in this case."
+            },
+            "Coursework scope": {
+              "judgment": "PASS",
+              "reason": "The confirmation and method question concern only the authorized equation; no additional practice is introduced."
+            }
+          }
+        },
+        "v2": {
+          "generation_source": {
+            "path": "artifacts/tutor-v2-local-qwen35-first-disconnected.jsonl",
+            "line": 5,
+            "case_id": "03"
+          },
+          "review_source": {
+            "path": "artifacts/tutor-v2-local-qwen35-first-human-review.json",
+            "json_pointer": "/cases/2"
+          },
+          "reply": "You are correct! Since 3 times 12 equals 36, your answer of x = 12 is right. Did you find the answer by dividing both sides by 3?",
+          "supplied_context": {
+            "grade": 7,
+            "subject": "Mathematics",
+            "authorized_problem": "Solve 3x = 36.",
+            "selected_history": [],
+            "current_student_message": "I got 12."
+          },
+          "approved_review": {
+            "Mathematical correctness": {
+              "judgment": "PASS",
+              "reason": "3 × 12 = 36 correctly verifies that x = 12 solves the supplied equation."
+            },
+            "Evidence discipline": {
+              "judgment": "PASS",
+              "reason": "“Did you find the answer by dividing both sides by 3?” is a question, not an assertion that the student used division; it does not invent a demonstrated method."
+            },
+            "Context use": {
+              "judgment": "PASS",
+              "reason": "It uses the supplied 3x = 36 to check the answer and treats the student’s method as a question rather than something already established."
+            },
+            "Teaching usefulness": {
+              "judgment": "FAIL",
+              "reason": "The yes/no division question leads the student toward a particular method instead of asking neutrally how they reached their answer."
+            },
+            "Adaptation": {
+              "judgment": "NOT_APPLICABLE",
+              "reason": "No earlier completed tutor-support exchange is supplied, so adaptation after prior support is not exercised in this case."
+            },
+            "Coursework scope": {
+              "judgment": "PASS",
+              "reason": "The confirmation, substitution and method question stay within the authorized equation."
+            }
+          }
+        }
+      }
+    },
+    {
+      "case_id": "04",
+      "finding": "Both reviews pass mathematical correctness and evidence discipline. V1 repeats whether the student operated on both sides; v2 asks why the student chose division. Context use is FAIL in v1 and PASS in v2; the unnecessary follow-up keeps Teaching usefulness FAIL in both.",
+      "sources": {
+        "v1": {
+          "generation_source": {
+            "path": "artifacts/tutor-v1-local-qwen35-first-disconnected.jsonl",
+            "line": 6,
+            "case_id": "04"
+          },
+          "review_source": {
+            "path": "artifacts/tutor-v1-local-qwen35-first-human-review.json",
+            "json_pointer": "/cases/3"
+          },
+          "reply": "Great job! Your answer is correct because dividing 36 by 3 does give 12. Since you have the right result, did you use the same operation to both sides as a way to check it? That makes sense for equations like this one.",
+          "supplied_context": {
+            "grade": 7,
+            "subject": "Mathematics",
+            "authorized_problem": "Solve 3x = 36.",
+            "selected_history": [],
+            "current_student_message": "I divided both sides by 3 and got 12."
+          },
+          "approved_review": {
+            "Mathematical correctness": {
+              "judgment": "PASS",
+              "reason": "PASS for the valid calculation 36 divided by 3 equals 12. Calling the solving operation a way to “check it” is misleading; this PASS does not endorse that wording."
+            },
+            "Evidence discipline": {
+              "judgment": "PASS",
+              "reason": "The result and division method are explicitly present in the student message, so the reply’s recognition of a correct result is grounded in supplied work."
+            },
+            "Context use": {
+              "judgment": "FAIL",
+              "reason": "It asks whether the same operation was used on both sides even though the student explicitly wrote “I divided both sides by 3.”"
+            },
+            "Teaching usefulness": {
+              "judgment": "FAIL",
+              "reason": "The repeated both-sides question asks for information already supplied, and describing the solving step as a “check” makes the feedback misleading."
+            },
+            "Adaptation": {
+              "judgment": "NOT_APPLICABLE",
+              "reason": "No earlier completed tutor-support exchange is supplied, so adaptation after prior support is not exercised in this case."
+            },
+            "Coursework scope": {
+              "judgment": "PASS",
+              "reason": "The discussion stays with the supplied equation and the student’s division method; it does not add assigned practice."
+            }
+          }
+        },
+        "v2": {
+          "generation_source": {
+            "path": "artifacts/tutor-v2-local-qwen35-first-disconnected.jsonl",
+            "line": 6,
+            "case_id": "04"
+          },
+          "review_source": {
+            "path": "artifacts/tutor-v2-local-qwen35-first-human-review.json",
+            "json_pointer": "/cases/3"
+          },
+          "reply": "Great job! Your answer of 12 is correct because 3 times 12 does equal 36. How did you decide to divide by 3?",
+          "supplied_context": {
+            "grade": 7,
+            "subject": "Mathematics",
+            "authorized_problem": "Solve 3x = 36.",
+            "selected_history": [],
+            "current_student_message": "I divided both sides by 3 and got 12."
+          },
+          "approved_review": {
+            "Mathematical correctness": {
+              "judgment": "PASS",
+              "reason": "The reply correctly verifies the student’s answer using 3 × 12 = 36."
+            },
+            "Evidence discipline": {
+              "judgment": "PASS",
+              "reason": "The correct-result feedback is grounded in the supplied answer, and the student explicitly reported dividing both sides by 3; no unseen method or mastery is asserted."
+            },
+            "Context use": {
+              "judgment": "PASS",
+              "reason": "“How did you decide to divide by 3?” asks why the stated operation was chosen, not whether the student performed it; it is not a repetition of what the student already said they did."
+            },
+            "Teaching usefulness": {
+              "judgment": "FAIL",
+              "reason": "The why question is an unnecessary follow-up after the student has supplied a valid method and answer, rather than concise recognition of that supplied work."
+            },
+            "Adaptation": {
+              "judgment": "NOT_APPLICABLE",
+              "reason": "No earlier completed tutor-support exchange is supplied, so adaptation after prior support is not exercised in this case."
+            },
+            "Coursework scope": {
+              "judgment": "PASS",
+              "reason": "The substitution check and question concern only the authorized 3x = 36 and the student’s stated method."
+            }
+          }
+        }
+      }
+    },
+    {
+      "case_id": "05",
+      "finding": "V1 offers valid division guidance without rejecting 12; v2 explicitly calls the correct answer 12 incorrect because the stated subtraction method is wrong. Approved mathematical correctness is PASS in v1 and FAIL in v2. This is a regression observation, not proof that the addition caused it.",
+      "sources": {
+        "v1": {
+          "generation_source": {
+            "path": "artifacts/tutor-v1-local-qwen35-first-disconnected.jsonl",
+            "line": 7,
+            "case_id": "05"
+          },
+          "review_source": {
+            "path": "artifacts/tutor-v1-local-qwen35-first-human-review.json",
+            "json_pointer": "/cases/4"
+          },
+          "reply": "To find the value of x, you need to divide both sides by 3 instead of subtracting. What would happen if you divided 3x by 3?",
+          "supplied_context": {
+            "grade": 7,
+            "subject": "Mathematics",
+            "authorized_problem": "Solve 3x = 36.",
+            "selected_history": [],
+            "current_student_message": "I got 12 by subtracting 3."
+          },
+          "approved_review": {
+            "Mathematical correctness": {
+              "judgment": "PASS",
+              "reason": "Dividing both sides of 3x = 36 by 3 rather than subtracting 3 is valid corrective mathematical guidance."
+            },
+            "Evidence discipline": {
+              "judgment": "PASS",
+              "reason": "The reply responds to the explicitly stated subtraction account without inventing additional steps or confidently labeling a misconception."
+            },
+            "Context use": {
+              "judgment": "PASS",
+              "reason": "It uses the supplied equation and the student’s stated subtraction to direct attention to division; the missed investigation is retained as a teaching-usefulness failure."
+            },
+            "Teaching usefulness": {
+              "judgment": "FAIL",
+              "reason": "Although its corrective guidance is valid, it jumps to division and asks about 3x divided by 3 without investigating how the student reports obtaining 12 by subtracting 3."
+            },
+            "Adaptation": {
+              "judgment": "NOT_APPLICABLE",
+              "reason": "No earlier completed tutor-support exchange is supplied, so adaptation after prior support is not exercised in this case."
+            },
+            "Coursework scope": {
+              "judgment": "PASS",
+              "reason": "Its guidance and next-step question concern only solving the authorized 3x = 36."
+            }
+          }
+        },
+        "v2": {
+          "generation_source": {
+            "path": "artifacts/tutor-v2-local-qwen35-first-disconnected.jsonl",
+            "line": 7,
+            "case_id": "05"
+          },
+          "review_source": {
+            "path": "artifacts/tutor-v2-local-qwen35-first-human-review.json",
+            "json_pointer": "/cases/4"
+          },
+          "reply": "Your answer of 12 is incorrect because subtracting 3 does not solve the equation $3x = 36$. The variable $x$ represents a number that, when multiplied by 3, equals 36. Have you tried dividing both sides by 3 to isolate x?",
+          "supplied_context": {
+            "grade": 7,
+            "subject": "Mathematics",
+            "authorized_problem": "Solve 3x = 36.",
+            "selected_history": [],
+            "current_student_message": "I got 12 by subtracting 3."
+          },
+          "approved_review": {
+            "Mathematical correctness": {
+              "judgment": "FAIL",
+              "reason": "The statement “Your answer of 12 is incorrect” is false: 12 solves 3x = 36. A wrong reported method does not make that correct numerical answer incorrect."
+            },
+            "Evidence discipline": {
+              "judgment": "PASS",
+              "reason": "It responds to the explicitly stated subtraction account and asks about division without asserting an unseen division method or broad understanding."
+            },
+            "Context use": {
+              "judgment": "PASS",
+              "reason": "It uses the supplied equation and the student’s reported subtraction; misjudging the correct answer is recorded under mathematical correctness and teaching usefulness."
+            },
+            "Teaching usefulness": {
+              "judgment": "FAIL",
+              "reason": "It conflates result correctness with method validity, rejecting 12 because subtraction is not the solving operation instead of investigating the conflicting account and separating answer from explanation."
+            },
+            "Adaptation": {
+              "judgment": "NOT_APPLICABLE",
+              "reason": "No earlier completed tutor-support exchange is supplied, so adaptation after prior support is not exercised in this case."
+            },
+            "Coursework scope": {
+              "judgment": "PASS",
+              "reason": "The equation explanation and division suggestion remain within the current authorized problem."
+            }
+          }
+        }
+      }
+    },
+    {
+      "case_id": "08",
+      "finding": "Evidence discipline, Context use, Teaching usefulness and Adaptation fail in both approved reviews. V1 mishandles tutor-provided division; v2 adds unsupported “quickly” praise and also mishandles tutor-provided guidance.",
+      "sources": {
+        "v1": {
+          "generation_source": {
+            "path": "artifacts/tutor-v1-local-qwen35-first-disconnected.jsonl",
+            "line": 10,
+            "case_id": "08"
+          },
+          "review_source": {
+            "path": "artifacts/tutor-v1-local-qwen35-first-human-review.json",
+            "json_pointer": "/cases/7"
+          },
+          "reply": "You are correct, x = 12.\n\nSince you didn't show the steps yet, how did you decide to divide by 3? Sometimes it helps to remember that dividing both sides of an equation by the same number keeps it balanced.",
+          "supplied_context": {
+            "grade": 7,
+            "subject": "Mathematics",
+            "authorized_problem": "Solve 3x = 36.",
+            "selected_history": [
+              {
+                "student": "I don't know what to do.",
+                "tutor": "Divide both sides by 3. What is 36 divided by 3?"
+              }
+            ],
+            "current_student_message": "12."
+          },
+          "approved_review": {
+            "Mathematical correctness": {
+              "judgment": "PASS",
+              "reason": "x = 12 is correct for 3x = 36, and dividing both sides by the same number preserves equality."
+            },
+            "Evidence discipline": {
+              "judgment": "FAIL",
+              "reason": "“How did you decide to divide by 3?” attributes the division decision to the student even though the selected tutor message explicitly supplied that operation."
+            },
+            "Context use": {
+              "judgment": "FAIL",
+              "reason": "It overlooks its own prior “Divide both sides by 3” guidance and treats the guided answer “12” as if the method choice needs to be attributed to the student."
+            },
+            "Teaching usefulness": {
+              "judgment": "FAIL",
+              "reason": "It asks the student to explain a division decision that the tutor already supplied rather than accurately acknowledging guided success."
+            },
+            "Adaptation": {
+              "judgment": "FAIL",
+              "reason": "The follow-up does not adapt to its own explicit division instruction; it asks how the student chose that already-given step."
+            },
+            "Coursework scope": {
+              "judgment": "PASS",
+              "reason": "Its confirmation, division question and balance reminder stay within the authorized equation."
+            }
+          }
+        },
+        "v2": {
+          "generation_source": {
+            "path": "artifacts/tutor-v2-local-qwen35-first-disconnected.jsonl",
+            "line": 10,
+            "case_id": "08"
+          },
+          "review_source": {
+            "path": "artifacts/tutor-v2-local-qwen35-first-human-review.json",
+            "json_pointer": "/cases/7"
+          },
+          "reply": "That is correct, 36 divided by 3 is indeed 12.\n\nSo, x = 12. Since you found the right answer quickly, did you try dividing both sides of the equation directly in your head?",
+          "supplied_context": {
+            "grade": 7,
+            "subject": "Mathematics",
+            "authorized_problem": "Solve 3x = 36.",
+            "selected_history": [
+              {
+                "student": "I don't know what to do.",
+                "tutor": "Divide both sides by 3. What is 36 divided by 3?"
+              }
+            ],
+            "current_student_message": "12."
+          },
+          "approved_review": {
+            "Mathematical correctness": {
+              "judgment": "PASS",
+              "reason": "36 divided by 3 is 12, and x = 12 is the correct solution to the supplied equation."
+            },
+            "Evidence discipline": {
+              "judgment": "FAIL",
+              "reason": "“You found the right answer quickly” asserts unsupported student speed: the supplied chat contains no evidence of how quickly the student answered."
+            },
+            "Context use": {
+              "judgment": "FAIL",
+              "reason": "It overlooks that the tutor already directed division by 3 and asks whether the student divided both sides mentally, mishandling the tutor-provided method."
+            },
+            "Teaching usefulness": {
+              "judgment": "FAIL",
+              "reason": "The unsupported speed praise and question about mentally dividing both sides do not accurately acknowledge guided success or offer a useful next step based on that guidance."
+            },
+            "Adaptation": {
+              "judgment": "FAIL",
+              "reason": "After supplying “Divide both sides by 3,” it fails to adapt to the student’s guided answer and instead speculates about how the student performed the already-given operation."
+            },
+            "Coursework scope": {
+              "judgment": "PASS",
+              "reason": "Its arithmetic confirmation and method question remain about the authorized equation and do not introduce additional practice."
+            }
+          }
+        }
+      }
+    },
+    {
+      "case_id": "10",
+      "finding": "Both replies recognize the supplied method and check, with PASS in the applicable dimensions and Adaptation NOT_APPLICABLE. This is observed preservation in one sample each, not a reliability claim.",
+      "sources": {
+        "v1": {
+          "generation_source": {
+            "path": "artifacts/tutor-v1-local-qwen35-first-disconnected.jsonl",
+            "line": 12,
+            "case_id": "10"
+          },
+          "review_source": {
+            "path": "artifacts/tutor-v1-local-qwen35-first-human-review.json",
+            "json_pointer": "/cases/9"
+          },
+          "reply": "Your answer is correct! You correctly divided both sides by 3 to get x = 12, and your check confirms that 3 times 12 equals 36. Great job using a solid method!",
+          "supplied_context": {
+            "grade": 7,
+            "subject": "Mathematics",
+            "authorized_problem": "Solve 3x = 36.",
+            "selected_history": [],
+            "current_student_message": "I divided both sides by 3 and got x = 12. I checked: 3 × 12 = 36."
+          },
+          "approved_review": {
+            "Mathematical correctness": {
+              "judgment": "PASS",
+              "reason": "Dividing both sides by 3 gives x = 12, and the stated check 3 × 12 = 36 is correct."
+            },
+            "Evidence discipline": {
+              "judgment": "PASS",
+              "reason": "The praise explicitly refers to the division and check the student actually supplied; it does not claim mastery or unsupported broader understanding."
+            },
+            "Context use": {
+              "judgment": "PASS",
+              "reason": "It acknowledges both the already-explained method and the already-completed substitution check rather than asking for either again."
+            },
+            "Teaching usefulness": {
+              "judgment": "PASS",
+              "reason": "It briefly confirms the valid method and check without an unnecessary follow-up question after sufficient reasoning and verification."
+            },
+            "Adaptation": {
+              "judgment": "NOT_APPLICABLE",
+              "reason": "No earlier completed tutor-support exchange is supplied, so adaptation after prior support is not exercised in this case."
+            },
+            "Coursework scope": {
+              "judgment": "PASS",
+              "reason": "It confirms only the supplied equation, method and check and introduces no new assigned work."
+            }
+          }
+        },
+        "v2": {
+          "generation_source": {
+            "path": "artifacts/tutor-v2-local-qwen35-first-disconnected.jsonl",
+            "line": 12,
+            "case_id": "10"
+          },
+          "review_source": {
+            "path": "artifacts/tutor-v2-local-qwen35-first-human-review.json",
+            "json_pointer": "/cases/9"
+          },
+          "reply": "Great work! Your method of dividing both sides by 3 is exactly right for this problem, and your check confirms that the answer is correct.",
+          "supplied_context": {
+            "grade": 7,
+            "subject": "Mathematics",
+            "authorized_problem": "Solve 3x = 36.",
+            "selected_history": [],
+            "current_student_message": "I divided both sides by 3 and got x = 12. I checked: 3 × 12 = 36."
+          },
+          "approved_review": {
+            "Mathematical correctness": {
+              "judgment": "PASS",
+              "reason": "Dividing both sides by 3 is correct for 3x = 36, and the student’s supplied check 3 × 12 = 36 confirms the result."
+            },
+            "Evidence discipline": {
+              "judgment": "PASS",
+              "reason": "The praise specifically refers to the method and check the student actually supplied; it makes no unsupported claim of mastery or broader understanding."
+            },
+            "Context use": {
+              "judgment": "PASS",
+              "reason": "It recognizes both the already-stated division method and completed check without asking for them again."
+            },
+            "Teaching usefulness": {
+              "judgment": "PASS",
+              "reason": "It gives concise confirmation of sufficient method-and-check evidence without an unnecessary follow-up."
+            },
+            "Adaptation": {
+              "judgment": "NOT_APPLICABLE",
+              "reason": "No earlier completed tutor-support exchange is supplied, so adaptation after prior support is not exercised in this case."
+            },
+            "Coursework scope": {
+              "judgment": "PASS",
+              "reason": "It confirms only the authorized equation and the student’s method and check; no new practice is assigned."
+            }
+          }
+        }
+      }
+    }
+  ],
+  "causal_hypotheses": [
+    "The addition might influence whether the model asserts or asks about an unknown method, but one observed reply per prompt cannot establish that it caused the case 3 difference.",
+    "The case 5 regression and persistent case 8 failures might reflect model variability, prompt sensitivity, or other runtime conditions; these are possibilities, not established causes."
+  ],
+  "conclusion_so_far": "Mixed/inconclusive; one response per case cannot establish a reliable prompt effect.",
+  "proposed_next_experiment": {
+    "cases": [
+      "03",
+      "04",
+      "05",
+      "08",
+      "10"
+    ],
+    "prompt_versions": [
+      "v1",
+      "v2"
+    ],
+    "fresh_samples_per_case_per_prompt": 3,
+    "scheduled_slots": 30,
+    "maximum_generation_attempts": 30,
+    "repeated_samples": "Separate observations, never retries or replacements; prior baseline samples excluded.",
+    "schedule_seed": 20261019,
+    "schedule_seed_provenance": "Ordinary implementation choice for reproducible scheduling, not a model-generation seed.",
+    "model_generation_seed": null,
+    "model_generation_seed_policy": "No override; preserve model/runtime defaults and record available metadata.",
+    "stopping": "Preserve existing stop-on-timeout and other local stop conditions. Retain every failed and unexecuted slot.",
+    "review": "Separate label-masked view and version mapping; not fully blinded independent review because baseline replies have been seen."
+  },
+  "approval_provenance": {
+    "preparation_authority": "Current human request beginning “Prepare the next offline AI Tutor experiment: a scoped v1/v2 repeatability comparison.”",
+    "scope": "Research preservation, plan/runner/review preparation and deterministic verification only. Do not run local generation or paid API calls yet.",
+    "human_request_date_from_session": "2026-10-19",
+    "planning_chat_approval_dates": null,
+    "historical_run_approval_dates": null,
+    "note": "Historical run and review recording timestamps above are copied from artifacts and are not invented approval dates. Review provenance is copied without claiming independent reviewer agreement."
+  },
+  "limits": [
+    "Five known cases only; not full regression coverage, a held-out evaluation or proof of generalization.",
+    "No automated instructional judge, aggregate score, threshold, significance claim or new precision/recall metric.",
+    "Any later promotion decision must revisit broader regression coverage."
+  ]
+}

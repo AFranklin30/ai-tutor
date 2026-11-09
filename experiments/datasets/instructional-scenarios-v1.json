@@ -1,0 +1,241 @@
+{
+  "dataset_id": "instructional-scenarios",
+  "dataset_version": "v1",
+  "status": "APPROVED_SCENARIO_SPECIFICATION",
+  "data_classification": "synthetic",
+  "approval": {
+    "recorded_date": "2026-11-08",
+    "decision": "human-approved supplemental instructional evaluation specification",
+    "evidence": "Human review approved the six-scenario specification and authorized creation of this versioned dataset. The suite is supplemental and outside the required pilot gate."
+  },
+  "purpose": "Supplemental instructional regression and transfer evidence for future V1 versus V3 comparison. This dataset does not replace or modify the original twelve-case evaluation or seven-case pilot dataset.",
+  "pilot_gate_status": "OUTSIDE_REQUIRED_PILOT_GATE",
+  "rubric_reference": "docs/evals.md: Offline tutor evaluation v1 — existing six human-review dimensions",
+  "mapping_semantics": "review_only associations to existing dimensions and case-specific expectations; not additional dimensions, scores, blockers, or automatic judgments. Record PASS, FAIL, or NOT_APPLICABLE with reviewer explanations. No weights, aggregate scores, or overall winner.",
+  "model_input_boundary": "Only each case's input object is model-facing. All expected behavior, review criteria, dimension mappings, pair metadata, and limitations are reviewer-only and must never enter model requests.",
+  "future_prompt_comparison": {
+    "prompt_versions": [
+      "v1",
+      "v3"
+    ],
+    "execution_authorized": false,
+    "repetitions": null,
+    "acceptance_procedure": null
+  },
+  "review_dimensions": [
+    "Mathematical correctness",
+    "Evidence discipline",
+    "Context use",
+    "Teaching usefulness",
+    "Adaptation",
+    "Coursework scope"
+  ],
+  "cases": [
+    {
+      "id": "instructional-scenarios-v1-01",
+      "name": "Correct answer, incorrect reasoning",
+      "input": {
+        "problem": "3x = 36",
+        "history": [],
+        "current_student_message": "I subtracted 3 from 36, so x = 12."
+      },
+      "review_only": {
+        "successful_tutor_behavior": "Distinguish the correct answer from the incorrect supporting reasoning; identify that subtracting 3 from 36 does not produce 12; explain that dividing both sides by 3 isolates x; do not assume a confirmed misconception. A brief understanding-check question is allowed but not required.",
+        "evaluation_criteria": [
+          "Recognizes x = 12 as a correct solution to 3x = 36.",
+          "Identifies the mismatch between the stated subtraction and the answer without asserting a confirmed misconception.",
+          "Correctly explains division by 3 as the inverse operation that isolates x.",
+          "Any understanding-check question is brief and useful; repeated questioning is not required."
+        ],
+        "rubric_dimensions": [
+          "Mathematical correctness",
+          "Evidence discipline",
+          "Context use",
+          "Teaching usefulness"
+        ],
+        "not_applicable_dimensions": [
+          "Adaptation",
+          "Coursework scope"
+        ],
+        "paired_evaluation": {
+          "pair_id": "instructional-scenarios-v1-01-02-consistency",
+          "role": "anchor"
+        },
+        "limitations": "A single response cannot establish the student's underlying misconception or whether the student understood the explanation.",
+        "judgments": "PENDING"
+      }
+    },
+    {
+      "id": "instructional-scenarios-v1-02",
+      "name": "Consistency with changed numbers",
+      "input": {
+        "problem": "4x = 28",
+        "history": [],
+        "current_student_message": "I subtracted 4 from 28, so x = 7."
+      },
+      "review_only": {
+        "successful_tutor_behavior": "Apply the same answer-versus-reasoning distinction as scenario 1 to this equation: recognize the correct answer, identify the arithmetic mismatch, explain division by 4, and do not assume a confirmed misconception. Wording need not match scenario 1; a brief understanding-check question is allowed but not required.",
+        "evaluation_criteria": [
+          "Recognizes x = 7 as a correct solution to 4x = 28.",
+          "Identifies that subtracting 4 from 28 does not produce 7, without asserting a confirmed misconception.",
+          "Correctly explains division by 4 as the inverse operation that isolates x.",
+          "Applies the paired principle consistently with scenario 1 while responding specifically to this equation; identical wording and repeated questions are not required."
+        ],
+        "rubric_dimensions": [
+          "Mathematical correctness",
+          "Evidence discipline",
+          "Context use",
+          "Teaching usefulness"
+        ],
+        "not_applicable_dimensions": [
+          "Adaptation",
+          "Coursework scope"
+        ],
+        "paired_evaluation": {
+          "pair_id": "instructional-scenarios-v1-01-02-consistency",
+          "role": "changed-numbers"
+        },
+        "pair_consistency_semantics": "Descriptive comparison of the two case-level reviews only; not a separate score or aggregate. It cannot establish a memorization mechanism or general consistency beyond this pair.",
+        "limitations": "The pair can show whether responses handle these two equations consistently and specifically. It cannot establish an internal memorization mechanism or performance on other problems.",
+        "judgments": "PENDING"
+      }
+    },
+    {
+      "id": "instructional-scenarios-v1-03",
+      "name": "Investigating algebraic notation",
+      "input": {
+        "problem": "5x = 45",
+        "history": [],
+        "current_student_message": "I subtracted 5 from 45 and got x = 40."
+      },
+      "review_only": {
+        "successful_tutor_behavior": "Evaluate only the initial diagnostic response. Investigate what the student thinks 5x represents and how that relates to the answer; do not assume the student understands or misunderstands the notation. No follow-up turn is specified, so adaptation to a later response is not evaluated.",
+        "evaluation_criteria": [
+          "Uses a focused, understandable initial question to investigate the student's interpretation of 5x or their reasoning.",
+          "Does not assert a specific misconception from the single message.",
+          "Any mathematical claims are correct and grounded in the supplied equation.",
+          "Keeps the initial diagnostic response focused."
+        ],
+        "rubric_dimensions": [
+          "Mathematical correctness",
+          "Evidence discipline",
+          "Context use",
+          "Teaching usefulness"
+        ],
+        "not_applicable_dimensions": [
+          "Adaptation",
+          "Coursework scope"
+        ],
+        "limitations": "No student follow-up is supplied. This case cannot assess adaptation after the tutor learns what the student thinks 5x means.",
+        "judgments": "PENDING"
+      }
+    },
+    {
+      "id": "instructional-scenarios-v1-04",
+      "name": "Understanding inverse operations",
+      "input": {
+        "problem": "x / 4 = 6",
+        "history": [],
+        "current_student_message": "I added 4 to 6, so x = 10."
+      },
+      "review_only": {
+        "successful_tutor_behavior": "Evaluate only the initial diagnostic response. Investigate why the student chose addition without treating the cause as known. No follow-up turn is specified, so a later explanation conditional on the student's response is not evaluated.",
+        "evaluation_criteria": [
+          "The initial response investigates the stated choice of addition rather than assuming its cause.",
+          "Does not endorse x = 10 or make an incorrect mathematical claim.",
+          "Any explanation of the inverse operation is mathematically correct; the case does not evaluate a later response-dependent explanation.",
+          "Keeps the diagnostic response focused and useful."
+        ],
+        "rubric_dimensions": [
+          "Mathematical correctness",
+          "Evidence discipline",
+          "Context use",
+          "Teaching usefulness"
+        ],
+        "not_applicable_dimensions": [
+          "Adaptation",
+          "Coursework scope"
+        ],
+        "limitations": "No student follow-up is supplied. This case cannot establish why the student chose addition or assess adaptation and subsequent explanation.",
+        "judgments": "PENDING"
+      }
+    },
+    {
+      "id": "instructional-scenarios-v1-05",
+      "name": "Correct answer and correct reasoning",
+      "input": {
+        "problem": "4x = 28",
+        "history": [],
+        "current_student_message": "I divided both sides by 4 because multiplication by 4 is undone by division. So x = 7."
+      },
+      "review_only": {
+        "successful_tutor_behavior": "Recognize that both the answer and stated reasoning are correct; briefly affirm the demonstrated method and allow the student to move forward. Do not unnecessarily reteach or ask a question without instructional purpose. Do not infer broad mastery.",
+        "evaluation_criteria": [
+          "Recognizes both x = 7 and the stated division method as correct for 4x = 28.",
+          "Affirms only the understanding demonstrated in this example.",
+          "Avoids unnecessary reteaching or follow-up questions.",
+          "Makes no incorrect mathematical claim."
+        ],
+        "rubric_dimensions": [
+          "Mathematical correctness",
+          "Evidence discipline",
+          "Context use",
+          "Teaching usefulness"
+        ],
+        "not_applicable_dimensions": [
+          "Adaptation",
+          "Coursework scope"
+        ],
+        "limitations": "A correct explanation in one example does not establish independent performance on other problems or broad mastery.",
+        "judgments": "PENDING"
+      }
+    },
+    {
+      "id": "instructional-scenarios-v1-06",
+      "name": "Conversational context and demonstrated progress",
+      "input": {
+        "problem": "3x = 36",
+        "history": [
+          {
+            "role": "tutor",
+            "content": "Which operation should we use to isolate x?"
+          },
+          {
+            "role": "student",
+            "content": "Division by 3."
+          },
+          {
+            "role": "tutor",
+            "content": "What is 36 divided by 3?"
+          },
+          {
+            "role": "student",
+            "content": "12."
+          }
+        ],
+        "current_student_message": "So x = 12 because we divided both sides by 3."
+      },
+      "review_only": {
+        "successful_tutor_behavior": "Recognize the student's successful application of the guided steps, briefly acknowledge progress, and stop. Do not restart the lesson or claim independent strategy selection. 'Move forward' means brief acknowledgment only because no next assigned problem is provided.",
+        "evaluation_criteria": [
+          "Uses the ordered tutor/student history, including that the tutor supplied the operation prompt and quotient question.",
+          "Recognizes the student's correct application of the guided steps and briefly acknowledges progress.",
+          "Does not claim the student independently selected the strategy or make a broader mastery claim.",
+          "Does not restart the explanation, invent a next problem, or continue beyond a brief acknowledgment."
+        ],
+        "rubric_dimensions": [
+          "Mathematical correctness",
+          "Evidence discipline",
+          "Context use",
+          "Teaching usefulness",
+          "Adaptation"
+        ],
+        "not_applicable_dimensions": [
+          "Coursework scope"
+        ],
+        "limitations": "This case evaluates use of the supplied sequence and guided progress only. It cannot establish independent strategy selection, performance on a new problem, or the content of an unavailable next assignment.",
+        "judgments": "PENDING"
+      }
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 # Testing and evaluation policy
 
-Status: Approved Steps 4–10 verification obligations; exact cases, calibrated thresholds, and execution configuration remain UNRESOLVED.
+Status: Approved Steps 4–10 verification obligations. Case membership and execution configuration are resolved only for the explicitly approved suites/protocols below; other exact cases, calibrated thresholds, and execution configurations remain UNRESOLVED.
 Approval: 2026-10-04 human synchronization request decision 24; decisions.md STEP4-006. Python/pytest are already approved by architecture.md §§2, 26.
 
 ## Deterministic contract tests
@@ -128,7 +128,40 @@ Establish a baseline before claiming improvement. Meaningful prompt, model, RAG,
 
 Relevant slices include POC type, math topic, difficulty, evidence quality, clear versus ambiguous evidence, no-POC, insufficient evidence, multiple POCs, “idk”/minimal responses, and retrieval conditions. Overall averages must not hide weak slices.
 
-Release gates follow failure risk and safe containment. Unauthorized actions, high-confidence incorrect POCs, and unacceptable answer leakage are strong gate candidates; exact criteria remain unresolved. A weak but safely handled slice may be monitored/improved without necessarily blocking a controlled MVP. Correct INSUFFICIENT_EVIDENCE on “idk” is safer than fabricated confident diagnosis. This distinction does not relax deterministic security, authority, or durability contracts.
+Release gates follow failure risk and safe containment. The three student-facing pilot-blocking criteria below are approved by decisions.md PILOT-EVAL-001; PILOT-EVAL-002 adds the generated-practice blocker and seven approved suite members. Other exact gate criteria remain unresolved. Unauthorized actions, high-confidence incorrect POCs, and unacceptable answer leakage remain additional gate candidates. A weak but safely handled slice may be monitored/improved without necessarily blocking a controlled MVP, subject to the approved pilot-blocking criteria. Correct INSUFFICIENT_EVIDENCE on “idk” is safer than fabricated confident diagnosis. This distinction does not relax deterministic security, authority, or durability contracts.
+
+### Approved student-facing pilot-blocking criteria — PILOT-EVAL-001
+
+Approval: current human request dated 2026-10-19 (America/Chicago), recorded in decisions.md PILOT-EVAL-001.
+
+1. The tutor must distinguish answer correctness from explanation correctness.
+2. The tutor must not invent student reasoning or claim understanding without evidence.
+3. The tutor must not judge an answer without sufficient, unambiguous problem context.
+
+A confirmed violation in the required evaluation suite blocks a student-facing pilot until addressed. Passing the suite does not establish zero real-world risk.
+
+These are qualitative necessary conditions alongside the existing security, privacy, authorization and deployment requirements; recording them does not authorize a student-facing pilot or make a readiness determination for any existing run. They align with the existing Mathematical correctness, Evidence discipline and Context use review dimensions; the six-dimension rubric and historical judgments remain unchanged. Other calibrated numeric thresholds remain unresolved.
+
+### First-pilot dataset and additional gate — PILOT-EVAL-002
+
+Approval: current human seven-case table and explicit decisions, recorded 2026-10-19 in decisions.md PILOT-EVAL-002. Generating new practice problems is outside this MVP; a confirmed violation in the required evaluation suite blocks the pilot until addressed. This adds a Coursework scope blocker while preserving all three PILOT-EVAL-001 blockers above. Passing the suite does not establish zero real-world risk or authorize deployment.
+
+An occasional unnecessary question is a quality weakness, not an automatic blocker. Existing Teaching usefulness and other dimension judgments remain applicable; a question that also violates an approved blocker is not excused by this distinction. Offering practice and actually generating unauthorized coursework remain distinguishable behaviors.
+
+Approved dataset membership: the seven cases in `experiments/datasets/pilot-one-step-v1.json`, version v1, with exact supplied problems/context, student messages and behavioral expectations. Review-only mappings associate each case with existing rubric dimensions and blocker references; they introduce neither scores nor additional rubric criteria. Keep expectations and mappings outside any future model input. All new instructional judgments remain pending. This is a separate dataset, not a replacement for the original twelve fixtures or an extension of their runner.
+
+PILOT-EVAL-003 resolves division notation, the tutor-supplied-step history, prompt selection and diagnostic repetitions below. Final acceptance procedure and whether additional coverage is needed remain unresolved. The earlier twelve-case exploratory baseline and five-case repeatability samples retain their separate identities and coverage limits; no historical evidence is re-scored or designated sufficient for pilot readiness.
+
+### Seven-case v1 diagnostic design — PILOT-EVAL-003
+
+Approval: current human clarification/preparation request, recorded 2026-10-19 in decisions.md PILOT-EVAL-003. Use prompt **v1** and clarified dataset **pilot-one-step/v2**, seven cases with three fresh attempts per case: **21 scheduled slots maximum**. Repeated samples are independent observations, not retries or failure replacements. This is diagnostic evidence, not final pilot acceptance. The final acceptance procedure remains unresolved, and this task prohibits inference.
+
+Case 5 uses exactly one synthetic exchange: Student “How do I solve x + 6 = 14?”; Tutor “Try subtracting 6 from both sides.”; current Student “8.” Case 7 retains the supplied “Existing assigned problem completed” state as context without inventing a completed equation, transcript or available next assignment. Case 6 supplies no identifiable problem (null). Dataset membership, behavioral expectations and existing rubric/blocker mappings are unchanged. Expected behaviors, mappings and scoring instructions remain outside model input; all six judgments stay pending.
+
+`experiments/tutor_v1/diagnostic.py` prepares an exclusive plan and schedule under `docs/experiments/pilot-one-step-v1-diagnostic-01/`; fake remains the execution default, with explicit local selection only. The schedule uses reproducible SHA-256 ordering with seed 20261019, separate from the unmodified model-generation seed/default. Preserve the existing local Qwen tag/digest, sampling parameters, 8,000-token input bound, 12,288 context, 1,000-token generation allowance, 30-second timeout, disabled thinking, exact reply schema, no retries and stop-on-timeout behavior. Reuse existing context selection, overflow and Qwen estimation assumptions. Every sample starts with only its case context; no sample-to-sample dialogue is carried.
+
+Future explicit local execution creates a new exclusive output directory, records dataset/prompt hashes, schedule position/sample ID, runtime/model identity, available timing/usage, and all outcomes including unexecuted slots after a stop. No failed slot is replaced; early stop can yield fewer than 21 requests. No hosted/paid execution path is added. Preserve historical evidence separately. Applicable deterministic verification uses mocked local transport; no instructional judge, aggregate score, release threshold or quality claim is introduced.
+
 
 ### Regression
 
@@ -211,3 +244,72 @@ Its persisted timestamps are then shifted to exercise expiry without a 45-second
 Existing heartbeat/timeout tests use shortened compatible settings; no claim is made about
 production scheduling, real provider cancellation, load, or external model quality. PostgreSQL
 constraints remain enabled. No assertions, retry policy, or contract criteria were weakened.
+
+## Offline tutor evaluation v1 — OFFLINE-EVAL-001
+
+Approval: decisions.md OFFLINE-EVAL-001 and human six-dimension clarification. This resolves runner/configuration, first prompt/fixture versions and one-sample policy only for this exploratory experiment; other evaluation deferrals remain unchanged.
+
+The twelve human-supplied cases/expectations are materialized in `experiments/tutor_v1/cases.py`. Grade 7 Mathematics/`3x = 36` are approved synthetic context where applicable. Case 1 has no problem; case 2 retains two candidate answers; case 11 deliberately excludes the earlier method. Cases 7–9 include the relevant prior tutor question/guidance. No later messages are included. Prompt is `prompt.txt` v1. Fixed fixtures only; changes require human review. One request per case, no automatic retries.
+
+Human reviewers score each dimension PASS, FAIL, or NOT_APPLICABLE with a brief reason grounded in the supplied context and actual reply. NOT_APPLICABLE is only for a dimension not exercised by the case. Dimensions may overlap; record failures separately. Friendly tone cannot compensate for incorrect mathematics or unsupported claims.
+
+1. **Mathematical correctness:** Results, calculations, notation and explanations must be correct. Correct results do not excuse invalid explanations. Clarification-only replies with no mathematical claims may be NOT_APPLICABLE.
+2. **Evidence discipline:** Claims about students require demonstrated work. No invented steps, confident diagnosis from ambiguity, or unsupported independence/broad understanding/mastery. Distinguish guided success from independent success.
+3. **Context use:** Use relevant problem, selected history and current message. Do not ask for supplied information, ignore guidance or pretend to remember excluded history. Clarify missing/ambiguous information.
+4. **Teaching usefulness:** Appropriate clarification, targeted feedback, manageable next step, explanation or brief confirmation. Avoid premature complete answers when guidance is useful. No obligatory follow-up after sufficient reasoning and verification.
+5. **Adaptation:** Adjust after prior support/student response. Increase support after ineffective hints or “I don’t know”; avoid repeated questions and unnecessary loops. Cases without adaptation opportunities may be NOT_APPLICABLE.
+6. **Coursework scope:** Stay within authorized coursework; invent no additional assigned practice or authorization. Necessary explanations, intermediate calculations and substitution checks for the current problem are permitted.
+
+`runner.py` writes per-dimension pending judgments/reasons, case expectations, supplied/selected context, replies or safe failure categories, latency, available provider usage/model metadata, config, prompt/fixture hashes and versions. Reviewers fill judgments/reasons in the artifact; no automated instructional judge, numeric weights, aggregate score or release threshold. Fake outputs are mechanics-only and cannot be an instructional baseline. Real-model baseline and human review remain unrun until explicitly requested; no improvement/acceptance claim is made.
+
+Deterministic verification covers history selection/whole-exchange trimming, required overflow without provider contact, exact configuration, nonblank/exact JSON shape, duplicate/extra fields, incomplete/refusal/tool output rejection, sanitized failures, no retries, deadline and CLI mode separation. Run `pytest -q tests/test_offline_tutor_eval.py` before paid execution. Mathematical/instructional judgments are separate from mechanical status. Single samples provide limited variability/coverage evidence, not validated teaching behavior.
+
+### Local Ollama baseline — OFFLINE-EVAL-003
+
+Approval: decisions.md OFFLINE-EVAL-003. Preserve all twelve v1 fixtures/expectations, six human-review dimensions and no automatic instructional scoring, thresholds or acceptance claim. One local run after setup is authorized: one generation per admitted case, no retries/reruns or prompt tuning. Fake default and paid Luna experiment remain separate. Run mocked deterministic tests before local inference: `pytest -q tests/test_offline_tutor_eval.py tests/test_local_tutor_eval.py`.
+
+Local evidence exclusively creates a new JSONL path and records prompt/fixture versions/hashes; requested runtime settings; actual model tag/digest/quantization/version/parameters/template and tokenizer metadata after successful setup; selected context; replies or safe mechanical failures; local elapsed time; available prompt/generated counts and nanosecond timing metadata (even on failed output); available loaded-model size/size_vram/context; all pending human judgments; and NOT_EXECUTED cases after setup failure or run halt. Loaded-model memory is not process peak RSS or total unified-memory pressure. No real-model metadata or speed/memory measurements may be inferred from mocks or setup failure. Record network disconnection as UNVERIFIED or OPERATOR_ATTESTED; the flag does not manipulate networking. Physically disconnected generation must be checked manually if the agent cannot verify it. Single-run comparisons remain exploratory and may differ by tokenizer, model defaults, cold loading, prompt caching and hardware; no quality/improvement conclusion is approved.
+
+### Scoped prompt v2 comparison plan — OFFLINE-EVAL-004
+
+Approval: current human prompt-v2 preparation request (2026-10-19). Hypothesis: clarifying who supplied each step may reduce unsupported student-method attribution in cases 3 and 8 while preserving recognition of student-supplied methods in cases 4 and 10. This is not an established cause or proven fix. Preserve the v1 prompt, twelve fixtures/expectations, six-dimension rubric, raw generation evidence and separate human-reviewed baseline scoring unchanged. The preparation authorization does not include new real-model generation.
+
+After separately authorized execution, compare the new v2 reply with its v1 reply by matching case ID and selected context, keeping model digest/settings fixed and recording runtime differences. Cases 3 and 8 examine attribution: no invented division method for the answer-only student, and no claim that the student independently selected the tutor-supplied division step. Cases 4 and 10 examine preservation: use the supplied division method, and recognize the supplied method plus check without asking for them again. These are applications of the existing dimensions/expectations, not new scoring criteria or an acceptance threshold. Review all twelve cases across all six existing dimensions for regressions; failures and incomplete outputs remain visible, not rerun or replaced. Keep both raw artifacts immutable and any v2 human review separate and initially pending.
+
+The baseline is `artifacts/tutor-v1-local-qwen35-first-disconnected.jsonl`, with scoring preserved in `artifacts/tutor-v1-local-qwen35-first-human-review.json`. Retain the case 4 mathematical-PASS/“check” caveat and case 7 Teaching usefulness PASS resolution when consulting baseline judgments. Baseline provenance remains assistant-proposed scores reviewed with the human in the planning chat, not independent reviewer agreement. Do not import baseline judgments into new model input or prefill v2 judgments from v1. One sample per case gives an exploratory comparison, not a causal/statistical improvement claim. No aggregate score, numeric weights, release threshold or quality acceptance claim is authorized. See `docs/experiments/tutor-prompt-v2.md` for the exact prospective command and comparison procedure.
+
+### Focused v1/v2 repeatability preparation — OFFLINE-EVAL-005
+
+Research record: `docs/research/tutor-v1-v2-repeatability.json`. Question: Does the evidence-attribution addition in prompt v2 reliably reduce unsupported claims about student reasoning? Preserve source-linked observations and approved review provenance; distinguish observed wording/judgments from causal hypotheses. Current conclusion is mixed/inconclusive: one reply/case/prompt cannot establish a reliable prompt effect. Do not invent historical approval dates or imply independent reviewer agreement.
+
+Prepared design: cases 3, 4, 5, 8 and 10, three fresh samples/case/prompt for both versions, exactly thirty scheduled slots and a maximum thirty local generation attempts. Samples are separate observations, not retries, replacements or baseline reuse. Method-unknown slice = case 3; student-supplied-method slice = cases 4/10; tutor-supplied-method slice = case 8. Case 5 is a regression check because v2 incorrectly rejected the correct answer 12. Preserve the existing six dimensions and all scoring expectations, model/settings/context/schema/timeout controls. Randomize reproducibly using recorded schedule seed, separately from any model seed. Keep all successes, failures and unexecuted slots, including halt-on-timeout. Mechanical counts describe execution, not aggregate instructional scores.
+
+The new label-masked review view hides prompt labels/ordering metadata where practical while retaining exact replies and case context, with the version mapping kept in another file. Its prior exposure to baseline replies prevents a claim of fully blinded independent review. Every new instructional judgment starts pending. No automated judge, aggregate score, numeric weights, threshold, significance claim or new precision/recall metric. Three repeats on five known cases reveal limited variation only: not a full regression run, a held-out evaluation or proof of generalization. Later promotion must revisit broader regression coverage. No new acceptance rule or promotion decision is approved.
+
+Preparation is authorized by the current human request; real generation and paid API calls remain unrun in this task. See `docs/experiments/tutor-repeatability.md` for exact paths, seed, prospective command and limitations. Verification uses mocked/fake transport and tests bounded scheduling, independent requests, correct metadata, label masking, no overwrite/retry/replacement, partial outcomes and timeout halting. Baseline human reviews remain immutable and are never copied as new judgments.
+
+### Example-only prompt v3 proposal — OFFLINE-EVAL-006
+
+Approval: current human request permits isolated preparation and deterministic verification only. Question: Can a concrete example improve the tutor’s handling of correct answers paired with conflicting explanations? V1 already explicitly checks result and explanation separately. In the recent x/4 = 6 diagnostic, responses at positions 4 and 17 endorsed the reported incorrect explanation; position 19 suggested multiplication without clearly investigating the conflict. Source-linked exact replies, approved review provenance and hashes are preserved in `docs/research/tutor-prompt-v3-example.json`.
+
+Hypothesis: A concrete example may improve compliance; this is not an established cause or proven fix. The sole independent variable is the specified example inserted before JSON-output instructions into v1 as separately versioned v3. Do not include v2's attribution addition or tune anything else. Preserve existing prompts, both datasets, six-dimension rubric, model digest/settings, input/context rules, generation allowance, no retries, timeout and historical evidence. Existing selectors make v3 selectable and record selected version/hash without adopting their existing sample counts as this experiment's approved design.
+
+Future evaluation must test transfer to equations different from x + 4 = 11, preserve correct-method handling, and check broader regressions across existing dimensions/blockers. The previous seven-case diagnostic dataset has informed this change and is not held out. Future suite/transfer-case selection, repetitions, execution authorization and final acceptance procedure remain unresolved; do not infer them from prior diagnostic or repeatability approvals. No v3 generation, paid calls, automated instructional judgments, aggregate improvement or pilot-readiness claim is authorized. All future judgments remain pending human review.
+
+### Supplemental instructional scenarios — SUPP-EVAL-001
+
+Approval: decisions.md SUPP-EVAL-001. The separately versioned supplemental dataset is [`experiments/datasets/instructional-scenarios-v1.json`](../experiments/datasets/instructional-scenarios-v1.json). It contains six synthetic instructional scenarios for future V1/V3 regression and transfer evaluation. It supplements, and does not replace or modify, the original twelve-case offline evaluation in `experiments/tutor_v1/cases.py` or the seven-case pilot diagnostic in `experiments/datasets/pilot-one-step-v1.json` and `pilot-one-step-v2.json`. Those datasets and their run/review artifacts retain their original identities and purposes.
+
+The supplemental suite is explicitly **outside the required pilot gate**. It provides additional regression and transfer evidence only; its outcomes do not alter pilot acceptance requirements. No new blocker is introduced.
+
+Review the six existing dimensions without changing their criteria: Mathematical correctness, Evidence discipline, Context use, Teaching usefulness, Adaptation, and Coursework scope. For each applicable dimension, record PASS, FAIL, or NOT_APPLICABLE with a reason grounded in the supplied input and tutor reply. Each case explicitly lists its applicable and NOT_APPLICABLE dimensions. NOT_APPLICABLE means the case does not exercise that dimension. The `review_only` object contains expected behavior, evaluation criteria, dimension mappings, pair metadata, limitations, and pending judgments. Only each case's `input` object is model-facing; never include reviewer-only fields in a model request.
+
+Scenarios 1 and 2 form a **descriptive paired consistency check**: they test the same answer-versus-reasoning distinction with changed numbers. Review each case and its existing dimensions independently, then describe any consistency or difference between the two case-level reviews. Do not assign a separate pair score, require identical wording, require repetitive questioning, infer memorization, or combine scores across cases or dimensions. The suite defines no weights, aggregate score, overall winner, release threshold, or final acceptance procedure.
+
+This SUPP-EVAL-001 decision resolves the supplemental suite/case selection referenced as future work under OFFLINE-EVAL-006. The dataset records V1 and V3 as the intended prompt-comparison versions, but execution is unauthorized and repetitions and acceptance procedure are unset. OFFLINE-EVAL-006 remains in force: this dataset approval does not authorize model generation, paid calls, or a pilot-readiness conclusion.
+
+### Subsequent V1/V2 repeatability execution and review — OFFLINE-EVAL-005 follow-up
+
+The preparation-only statements in the OFFLINE-EVAL-005 section above and in [`docs/experiments/tutor-repeatability.md`](experiments/tutor-repeatability.md) and [`docs/handoffs/offline-tutor-repeatability.md`](handoffs/offline-tutor-repeatability.md) describe the state at the end of preparation. The subsequently completed run, human-review finalization, and descriptive comparison are preserved as separate evidence; the historical preparation decisions and original artifacts are not rewritten.
+
+The prepared design was later executed locally for cases 03/04/05/08/10, prompts v1/v2, and three fresh observations per case and prompt: 30 observations total. The run had no mechanical failures or unexecuted slots. The finalized label-masked human review records 180 approved judgments across the six existing dimensions. The separate descriptive comparison reports mixed, slice-dependent observations; it does not declare an overall winner or establish causal improvement, statistical significance, generalization, or pilot readiness. Reviewers had seen baseline replies, so the review is not fully blinded independent review. See the [raw run evidence](../artifacts/tutor-v1-v2-repeatability-local-01/samples.jsonl), [finalized review](../artifacts/tutor-repeatability-label-masked-human-review-finalized-01.json), [machine-readable comparison](../artifacts/tutor-repeatability-slice-comparison-01.json), and [comparison report](../artifacts/tutor-repeatability-slice-comparison-01.md). Existing V1/V2 evidence remains separate from the supplemental V1/V3 dataset.

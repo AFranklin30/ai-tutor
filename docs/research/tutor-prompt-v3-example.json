@@ -1,0 +1,218 @@
+{
+  "record_type": "isolated_prompt_experiment_proposal",
+  "experiment_id": "tutor-prompt-v3-example",
+  "status": "PREPARED_NOT_EXECUTED",
+  "recorded_at": "2026-10-20T04:47:29.605963+00:00",
+  "research_question": "Can a concrete example improve the tutor’s handling of correct answers paired with conflicting explanations?",
+  "observation": "V1 already explicitly requires separate checking of results and explanations. In the recent division case, two responses endorsed the incorrect explanation; the third suggested multiplication without clearly investigating the conflict.",
+  "existing_instruction_evidence": {
+    "path": "experiments/tutor_v1/prompt.txt",
+    "rules": [
+      2,
+      5
+    ],
+    "rule_2": "Check both the result and the explanation. A correct result does not make an incorrect method valid.",
+    "rule_5": "When their answer and explanation conflict, investigate with a focused question. Do not confidently diagnose a misconception from ambiguous evidence."
+  },
+  "hypothesis": "A concrete example may improve compliance. This is not an established cause or proven fix.",
+  "independent_variable": {
+    "description": "This single example addition to v1; v3 is not based on v2.",
+    "exact_addition": "Example: For x + 4 = 11, the student says, “7, because I added 4.”\nAppropriate response: “7 is the correct answer. Can you show me where you added 4?”\nConfirm the result without endorsing the conflicting explanation or assuming what the student actually did.",
+    "placement": "Immediately before Return only a JSON object with exactly one field:, followed by one blank line."
+  },
+  "prompts": {
+    "v1": {
+      "path": "experiments/tutor_v1/prompt.txt",
+      "file_sha256": "dd20a59ddcc203825cf97ef8e5f5bf84fa043db8dc03f43afe505fc5e8c116b4",
+      "effective_prompt_sha256": "f432e56a2a7f56caaab8e12fbe7c01c15bcca19f5495bd4413cf4ba91ff16bed",
+      "hash_convention": "effective prompt: UTF-8 text with trailing newlines stripped; file hash: raw bytes"
+    },
+    "v2": {
+      "path": "experiments/tutor_v1/prompt-v2.txt",
+      "file_sha256": "c0258dd1dafed6fedf733651ad04dfd566e7d0c9d35b65ed0aaf325b089cb757",
+      "effective_prompt_sha256": "30b322f8853bcd38249f5fee9c0aff4e1c17da00e9f0b19fbf3b982e25fa2714",
+      "hash_convention": "effective prompt: UTF-8 text with trailing newlines stripped; file hash: raw bytes"
+    },
+    "v3": {
+      "path": "experiments/tutor_v1/prompt-v3.txt",
+      "file_sha256": "71961a5b31183bd305c3b9fb868be351ef8da32f2a89460a36ed3fff459f4709",
+      "effective_prompt_sha256": "3c8d0f14d0c87e71fa2110a3f5bd5acad0137f877842d5d961b758a5e018b52d",
+      "hash_convention": "effective prompt: UTF-8 text with trailing newlines stripped; file hash: raw bytes"
+    }
+  },
+  "model": {
+    "identity": {
+      "record_type": "runtime",
+      "version": "0.40.6",
+      "model": "qwen3.5:4b-q4_K_M",
+      "digest": "d8b0f5e9760cd1682034f292d7ef72ec46f432149be0df7574bf2d6e92e38c04",
+      "quantization": "Q4_K_M",
+      "parameter_size": "4.2B",
+      "model_context_length": 262144,
+      "tokenizer": {
+        "tokenizer.ggml.model": "gpt2",
+        "tokenizer.ggml.pre": "qwen35"
+      },
+      "thinking_values": [
+        false,
+        true
+      ],
+      "model_parameters": "temperature                    1\ntop_k                          20\ntop_p                          0.95\npresence_penalty               1.5",
+      "renderer": null,
+      "parser": null,
+      "template_source": null,
+      "template_sha256": "b507b9c2f6ca642bffcd06665ea7c91f235fd32daeefdf875a0f938db05fb315",
+      "model_size_bytes": 3324173934,
+      "server_controls": "cloud disabled and loopback binding verified in owned server log"
+    },
+    "required_digest": "d8b0f5e9760cd1682034f292d7ef72ec46f432149be0df7574bf2d6e92e38c04",
+    "config": {
+      "provider": "Ollama local",
+      "model": "qwen3.5:4b-q4_K_M",
+      "api": "/api/chat",
+      "host": "127.0.0.1:11435",
+      "cloud_disabled": true,
+      "think": false,
+      "num_ctx": 12288,
+      "max_input_tokens": 8000,
+      "num_predict": 1000,
+      "history_exchanges": 10,
+      "timeout_seconds": 30,
+      "retries": 0,
+      "stream": false,
+      "keep_alive": "5m",
+      "sampling": "installed model defaults; parameters captured in runtime record"
+    },
+    "sampling_parameters": {
+      "presence_penalty": "1.5",
+      "temperature": "1",
+      "top_k": "20",
+      "top_p": "0.95"
+    },
+    "model_generation_seed": null,
+    "seed_policy": "Preserve installed runtime/model defaults; no new override.",
+    "token_policy": "qwen35_gpt2_utf8_wire_bytes_plus_1024_assumed_framing_bound",
+    "output_schema": {
+      "type": "object",
+      "properties": {
+        "reply": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "reply"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "source_linked_observations": [
+    {
+      "review_id": "81575998aea53e015af4",
+      "case_id": "pilot-one-step-v1-03",
+      "sample_id": "s03",
+      "execution_position": 4,
+      "supplied_context": {
+        "grade": 7,
+        "subject": "Mathematics",
+        "authorized_problem": "x/4 = 6",
+        "selected_history": [],
+        "current_student_message": "24, because I divided by 4."
+      },
+      "exact_reply": "Your answer is correct! Since you need to isolate x in the equation x/4 = 6, dividing both sides by 4 (or multiplying by the reciprocal) is exactly what we do. Great job recognizing that 24 is the solution!",
+      "approved_rationale_summary": "Correct answer but incorrect endorsement of division to solve x/4 = 6. Mathematical and teaching failure. Evidence PASS because it uses the reported method; context PASS because it addresses the supplied equation, answer and explanation. Do not retroactively change these approved distinctions.",
+      "finding": "Endorses the reported incorrect division explanation.",
+      "generation_source": {
+        "path": "artifacts/pilot-one-step-v1-diagnostic-local-01/samples.jsonl",
+        "sha256": "060a6e3bfb8a01363fde25c95d6c8714f52bf0f5eed84b149e2d8d88da1a1576",
+        "line": 10
+      },
+      "review_source": {
+        "path": "artifacts/pilot-one-step-v1-diagnostic-human-review-01.json",
+        "sha256": "c6d06ea7ff774a8449d0a7e824039c3a9b3d07025d636cf5ab2b31b4a505a949",
+        "json_pointer": "/items/3"
+      }
+    },
+    {
+      "review_id": "4cf4333be3c81423bac6",
+      "case_id": "pilot-one-step-v1-03",
+      "sample_id": "s02",
+      "execution_position": 17,
+      "supplied_context": {
+        "grade": 7,
+        "subject": "Mathematics",
+        "authorized_problem": "x/4 = 6",
+        "selected_history": [],
+        "current_student_message": "24, because I divided by 4."
+      },
+      "exact_reply": "You are correct! To solve x / 4 = 6, you divide 6 by 4? Wait, actually, to isolate x, we multiply both sides by 4. This gives us x = 24. You arrived at the right answer, and your reasoning makes sense for this step.",
+      "approved_rationale_summary": "Corrects its own operation to multiplication but then endorses the student’s conflicting division explanation. Mathematics/context/teaching FAIL; evidence PASS because the method was reported rather than invented.",
+      "finding": "Endorses the reported incorrect division explanation.",
+      "generation_source": {
+        "path": "artifacts/pilot-one-step-v1-diagnostic-local-01/samples.jsonl",
+        "sha256": "060a6e3bfb8a01363fde25c95d6c8714f52bf0f5eed84b149e2d8d88da1a1576",
+        "line": 36
+      },
+      "review_source": {
+        "path": "artifacts/pilot-one-step-v1-diagnostic-human-review-01.json",
+        "sha256": "c6d06ea7ff774a8449d0a7e824039c3a9b3d07025d636cf5ab2b31b4a505a949",
+        "json_pointer": "/items/16"
+      }
+    },
+    {
+      "review_id": "7c5b7fee41bd51abd9e3",
+      "case_id": "pilot-one-step-v1-03",
+      "sample_id": "s01",
+      "execution_position": 19,
+      "supplied_context": {
+        "grade": 7,
+        "subject": "Mathematics",
+        "authorized_problem": "x/4 = 6",
+        "selected_history": [],
+        "current_student_message": "24, because I divided by 4."
+      },
+      "exact_reply": "Great job! You correctly found that x equals 24. Did you try multiplying both sides of the equation by 4 to solve for x?",
+      "approved_rationale_summary": "Correct result and operation; asks instead of attributing a method. Context/teaching FAIL because it does not explicitly reconcile the reported division with multiplication.",
+      "finding": "Suggests multiplication by question, without clearly investigating the reported conflicting division.",
+      "generation_source": {
+        "path": "artifacts/pilot-one-step-v1-diagnostic-local-01/samples.jsonl",
+        "sha256": "060a6e3bfb8a01363fde25c95d6c8714f52bf0f5eed84b149e2d8d88da1a1576",
+        "line": 40
+      },
+      "review_source": {
+        "path": "artifacts/pilot-one-step-v1-diagnostic-human-review-01.json",
+        "sha256": "c6d06ea7ff774a8449d0a7e824039c3a9b3d07025d636cf5ab2b31b4a505a949",
+        "json_pointer": "/items/18"
+      }
+    }
+  ],
+  "previous_research": {
+    "path": "docs/research/tutor-v1-v2-repeatability.json",
+    "sha256": "3d836f3a77a34dccb043387aee3523b1ce4ce7b9cdc6cc7ff3c3fd68a5822135",
+    "relationship": "Separate prior evidence-attribution experiment. Its historical conclusion and evidence are preserved; v3 does not include the v2 addition."
+  },
+  "future_evaluation_requirements": [
+    "Transfer: use equations different from x + 4 = 11 to examine correct answers paired with conflicting explanations; do not infer generalization from copying the example.",
+    "Preservation: check correct answers with explicitly supplied correct methods, distinguishing asking about a method from asserting its use.",
+    "Broader regressions: review all six existing dimensions and approved pilot blockers, including missing/ambiguous context, tutor-guided versus independent work and coursework scope.",
+    "Previous seven-case diagnostic data informed this change and is not held out. No new held-out dataset or suite membership is approved here.",
+    "Preserve every failure and unexecuted observation under existing no-retry and timeout rules; new judgments remain pending human review."
+  ],
+  "unresolved": {
+    "evaluation_dataset_and_transfer_cases": null,
+    "repetitions": null,
+    "execution_authorization": null,
+    "final_acceptance_procedure": null,
+    "note": "No diagnostic 21-slot or older one-sample design is implicitly adopted for this experiment. Future concrete suite, repetitions and execution require their own approval."
+  },
+  "approval_provenance": {
+    "scope": "Current human request authorizes isolated prompt-variant/research preparation, minimal offline version selection and deterministic checks only.",
+    "evidence": "User message beginning “Prepare an isolated example-based prompt experiment,” with the exact approved example and explicit no-inference restrictions.",
+    "historical_planning_approval_timestamp": null,
+    "review_provenance": "Source scores are assistant-proposed judgments reviewed and approved by the human in conversation; not independent reviewer agreement."
+  },
+  "limitations": [
+    "No v3 replies exist; no observed improvement, causal claim, statistical significance, aggregate score or pilot-readiness claim.",
+    "One existing model/configuration and previously examined synthetic examples do not establish transfer or real-world safety.",
+    "Approval timestamps unknown in source reviews remain unknown; runtime/recording timestamps are not approval dates."
+  ]
+}

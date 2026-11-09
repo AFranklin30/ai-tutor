@@ -1,0 +1,26 @@
+# First paid offline evaluation preparation
+
+- **TASK: BLOCKED** for paid evaluation; model switch and deterministic verification COMPLETE. OPENAI_API_KEY is absent from the execution environment; no project .env file was found. No provider request, billing probe, retry or rerun occurred.
+- **IMPLEMENTED:** Changed isolated runner model to gpt-6-luna and matching deterministic assertions. All other configuration, prompt v1, twelve fixtures, context selection and six dimensions preserved. New evidence includes supplied/selected context, expectations and 72 pending human judgments; no tutor replies exist.
+- **FILES CHANGED in this task:** `experiments/tutor_v1/runner.py`, `tests/test_offline_tutor_eval.py`, `docs/ai-runtime.md`, `docs/decisions.md`, this handoff, and new ignored `artifacts/tutor-v1-paid-2026-10-18-first.jsonl`. Preexisting working-tree changes were retained.
+- **CONTRACTS USED:** AGENTS.md; requirements/architecture/security/evals/ai-runtime “Offline tutor evaluation v1”; OFFLINE-EVAL-001 and new OFFLINE-EVAL-002. Current human message explicitly authorizes Luna and one paid run under unchanged limits.
+- **REQUEST/DATA FLOW:** CLI opens new evidence exclusively → writes configuration/version/hash header → credential check fails locally → safe failure record; no HTTP request. Evidence subsequently enriched locally with twelve NOT_EXECUTED cases and pricing/zero-cost summary. No database/backend/worker/public API/student data interaction. Credential contents were never printed or written.
+- **TESTS/EVALS RUN:** `.venv/bin/pytest -q tests/test_offline_tutor_eval.py`: 32 passed (0.08s). `.venv/bin/ruff check experiments tests/test_offline_tutor_eval.py`: passed. `.venv/bin/ruff format --check experiments tests/test_offline_tutor_eval.py`: five files already formatted. Paid CLI command with new evidence path exited 1, MISSING_PROVIDER_CREDENTIAL, before HTTP. Local evidence verification confirmed twelve unexecuted cases and 72 pending judgments. No full backend/database suite: no changes to those components, and scoped tests are independent of them. No live model eval or instructional review: blocked/pending respectively.
+- **RESULTS:** Zero replies, zero executed cases, twelve NOT_EXECUTED cases; one run-level credential failure, no observed provider token usage. Estimated incurred cost $0 because zero requests were sent. Official model page fetched 2026-10-18: https://developers.openai.com/api/docs/models/gpt-6-luna — standard USD per million tokens: input 0.10, cached input 0.01, cache writes 0.125, output 0.50. No account billing availability claim.
+- **DECISIONS MADE:** Ordinary scoped replacement and new evidence naming. No new evaluation criteria or acceptance decisions. Human supplied model/execution authorization; OFFLINE-EVAL-001 retained as historical evidence, superseded narrowly by OFFLINE-EVAL-002.
+- **APPROVED CONTRACT CHANGES:** ai-runtime model synchronized and dated decision/authorization recorded from current human request.
+- **DEVIATIONS:** Paid evaluation could not execute due to missing credential. Evidence records blockage, not successful model output.
+- **KNOWN RISKS / TODO:** Live model compatibility, account/model access, billing, latency, token usage and reply quality remain unverified. Existing runner sanitizes generic provider errors and continues across cases; before future execution, ensure unavailable credentials/billing stop the run without repeated attempts. Input admission remains a conservative byte-based bound; the shorter model name reduces serialized size, with unchanged text-only framing policy and trimming tests. No quality or release claim.
+- **NEXT LOGICAL SLICE:** Securely configure OPENAI_API_KEY in the execution environment, then perform the still-unexecuted paid evaluation in a new evidence path under the user's stated limits. Do not rerun any executed failures without instruction.
+
+## Contract check
+
+| Classification | Evidence | Contract / implication |
+| --- | --- | --- |
+| IMPLEMENTATION_BUG → resolved | runner CONFIG and test_request_config_and_no_eval_material used prior mini model; now Luna; 32 tests pass | Current explicit model authorization; ai-runtime offline section and OFFLINE-EVAL-002 synchronized |
+| MATCH | prompt.txt and cases.py unchanged during this task; existing selection/pending-review tests pass | evals offline fixtures, six dimensions and human authority preserved |
+| MATCH | runner payload/transport unchanged except model; deterministic config/deadline/no-retry/error tests pass | ai-runtime/security offline settings, fixed HTTPS endpoint and secret exclusion |
+| MATCH | experiment-only source change; no application imports/database access | architecture/requirements offline isolation; API and schema implementation not applicable because no endpoint or persistence change |
+| MATCH with execution limit | new JSONL safe credential failure plus NOT_EXECUTED cases | security/evals evidence boundaries; paid evaluation BLOCKED, human judgments pending |
+
+Review status: BLOCKED for paid execution; COMPLETE for scoped model change and deterministic verification. No unresolved product decision is needed to report this credential blocker.

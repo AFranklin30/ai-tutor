@@ -1,0 +1,81 @@
+{
+  "record_type": "prepared_diagnostic_plan",
+  "recorded_at": "2026-10-20T02:16:17.842205+00:00",
+  "spec": {
+    "experiment": "pilot-one-step-v1-diagnostic",
+    "purpose": "DIAGNOSTIC_NOT_ACCEPTANCE",
+    "dataset_id": "pilot-one-step",
+    "dataset_version": "v2",
+    "dataset_file": "experiments/datasets/pilot-one-step-v2.json",
+    "dataset_sha256": "7f57092e025dd1acdcbcc324e1be0006a292a5538847142610a5a891658d5dc3",
+    "case_ids": [
+      "pilot-one-step-v1-01",
+      "pilot-one-step-v1-02",
+      "pilot-one-step-v1-03",
+      "pilot-one-step-v1-04",
+      "pilot-one-step-v1-05",
+      "pilot-one-step-v1-06",
+      "pilot-one-step-v1-07"
+    ],
+    "prompt_version": "v1",
+    "prompt_sha256": "f432e56a2a7f56caaab8e12fbe7c01c15bcca19f5495bd4413cf4ba91ff16bed",
+    "fresh_attempts_per_case": 3,
+    "scheduled_slots": 21,
+    "maximum_generation_attempts": 21,
+    "schedule_seed": 20261019,
+    "schedule_algorithm": "sha256_sort_v1",
+    "model_generation_seed": null,
+    "model_generation_seed_policy": "No override; existing runtime defaults.",
+    "model": "qwen3.5:4b-q4_K_M",
+    "required_model_digest": "d8b0f5e9760cd1682034f292d7ef72ec46f432149be0df7574bf2d6e92e38c04",
+    "config": {
+      "provider": "Ollama local",
+      "model": "qwen3.5:4b-q4_K_M",
+      "api": "/api/chat",
+      "host": "127.0.0.1:11435",
+      "cloud_disabled": true,
+      "think": false,
+      "num_ctx": 12288,
+      "max_input_tokens": 8000,
+      "num_predict": 1000,
+      "history_exchanges": 10,
+      "timeout_seconds": 30,
+      "retries": 0,
+      "stream": false,
+      "keep_alive": "5m",
+      "sampling": "installed model defaults; parameters captured in runtime record"
+    },
+    "sampling_parameters": {
+      "presence_penalty": "1.5",
+      "temperature": "1",
+      "top_k": "20",
+      "top_p": "0.95"
+    },
+    "token_policy": "qwen35_gpt2_utf8_wire_bytes_plus_1024_assumed_framing_bound",
+    "reply_schema": {
+      "type": "object",
+      "properties": {
+        "reply": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "reply"
+      ],
+      "additionalProperties": false
+    },
+    "stop_on": [
+      "LOCAL_INPUT_BOUND_EXCEEDED",
+      "LOCAL_MODEL_MISMATCH",
+      "LOCAL_OUTPUT_ALLOWANCE_EXCEEDED",
+      "LOCAL_REQUEST_FAILED",
+      "LOCAL_RUNTIME_CONTEXT_UNVERIFIED",
+      "MODEL_TIMEOUT",
+      "UNEXPECTED_THINKING_OR_ACTION"
+    ],
+    "final_acceptance_procedure": null,
+    "execution_authorization": "Prepared only; current task explicitly prohibits inference.",
+    "review_policy": "All six dimensions pending human review; no automatic quality judge."
+  },
+  "schedule_sha256": "998405bc65744faf39960561101452fee1625ddc768cacad93d12f971f1ea114"
+}

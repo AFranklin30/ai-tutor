@@ -273,3 +273,92 @@ No runtime defect was found in Stage 6, and no application code, migration, endp
 contract policy changed. The tests use synthetic content; they do not certify production
 model safety, deployment supervision, load capacity, or real-student readiness.
 See [Stage 6 acceptance map and handoff](docs/handoffs/slice2a-stage6.md).
+
+## Offline tutor evaluation v1
+
+The isolated [experiment](experiments/tutor_v1/runner.py) uses the approved
+[configuration and review policy](docs/evals.md#offline-tutor-evaluation-v1--offline-eval-001).
+It has twelve fixed synthetic Grade 7 cases and the supplied tutor prompt v1. It never
+imports application processing or writes to the database. No backend/worker/API integration
+is included.
+
+Run deterministic verification and the default fake experiment without credentials:
+
+```sh
+.venv/bin/pytest -q tests/test_offline_tutor_eval.py
+.venv/bin/python -m experiments.tutor_v1.runner --output artifacts/tutor-v1-fake.jsonl
+```
+
+After a separate explicit human request for paid execution, provision OPENAI_API_KEY in
+the environment and use the following command (not executed during implementation):
+
+```sh
+.venv/bin/python -m experiments.tutor_v1.runner --mode paid --output artifacts/tutor-v1-paid.jsonl
+```
+
+Each command requires a new output path; existing evidence is never overwritten. Paid mode
+makes at most one Responses request per case, no retries, `store=false`, explicit reasoning
+`none`, 1,000-token output allowance and 30-second local deadline. Required overflow fails
+without provider contact. Input selection uses a conservative UTF-8-byte upper bound with
+framing reserve rather than an exact tokenizer; it may remove more history than necessary.
+A local timeout cannot guarantee that provider execution/billing stops.
+
+The JSONL header records config, hashes/versions and run mode. Case records preserve supplied
+and selected synthetic context, expectations, replies/failure categories, latency and available
+usage/model metadata. Fill each pending human judgment with PASS, FAIL or NOT_APPLICABLE and
+a grounded reason, following the six dimensions in evals.md. No automated instructional
+scores or release thresholds exist. Fake replies and JSON validity establish mechanics only;
+mathematical and instructional quality remain unreviewed until a requested real run and
+human review. Generated artifacts are ignored by Git.
+
+See the [implementation handoff and contract check](docs/handoffs/offline-tutor-eval-v1.md)
+for actual verification and remaining limitations.
+
+### Local Ollama option (synthetic only)
+
+The separate [local adapter](experiments/tutor_v1/local.py) preserves the fake default and
+Luna adapter. Use exactly `qwen3.5:4b-q4_K_M`; follow the
+[installation, download and disconnected-run steps](experiments/tutor_v1/LOCAL_SETUP.md).
+The current session has no installed Ollama; real inference and M1 memory/speed remain
+unverified. Installation/model download needs internet. Generation is local only, with
+cloud disabled and an owned server bound to 127.0.0.1:11435.
+
+```sh
+.venv/bin/pytest -q tests/test_offline_tutor_eval.py tests/test_local_tutor_eval.py
+# After setup and manual internet disconnection, execute once with a new output path:
+.venv/bin/python -m experiments.tutor_v1.local --network-disconnected \
+  --output artifacts/tutor-v1-local-qwen35-first-disconnected.jsonl
+```
+
+`--network-disconnected` records operator attestation; it does not disconnect or test
+networking. The local CLI never downloads or uses paid inference. It requests thinking
+disabled, 12,288 context tokens, at most 8,000 conservatively admitted input tokens and
+1,000 generated tokens, with the unchanged 30-second deadline and no retries. Missing
+setup or control verification fails safely; timeout halts further cases. All six judgments
+remain pending; JSON success does not establish instructional quality. See
+[OFFLINE-EVAL-003](docs/decisions.md#offline-eval-003--local-ollama-qwen35-4b-synthetic-baseline).
+
+### Scoped prompt v2 (preparation only)
+
+Prompt v1 remains the default and is preserved. Explicit `--prompt-version v2` selects the
+separate attribution clarification in [prompt-v2.txt](experiments/tutor_v1/prompt-v2.txt)
+on either isolated CLI; fake remains the original runner's default. See the
+[experiment and comparison plan](docs/experiments/tutor-prompt-v2.md) for the exact prospective
+local command and unchanged-model digest requirement. No real v2 generation or paid call
+was executed during preparation. New run judgments remain pending until human review.
+
+### Focused v1/v2 repeatability (preparation only)
+
+The [research record](docs/research/tutor-v1-v2-repeatability.json) preserves the mixed baseline
+findings and hypotheses. The [prepared protocol](docs/experiments/tutor-repeatability.md)
+schedules three fresh observations per prompt for cases 3/4/5/8/10 (thirty slots maximum),
+with a reproducible schedule, unchanged local controls, stop-on-timeout, separate raw evidence
+and label-masked review/mapping. Fake remains default; no paid mode. Real execution is not
+performed in preparation and awaits a later instruction. See the protocol for the exact
+prospective command; this is neither held-out evaluation nor full regression coverage.
+
+**Subsequent evidence:** The prepared V1/V2 schedule was later executed for 30 observations.
+Its finalized human review and mixed, slice-dependent descriptive comparison are documented
+in the [comparison report](artifacts/tutor-repeatability-slice-comparison-01.md). The report
+does not declare an overall winner or make a causal or pilot-readiness claim. The preparation
+protocol above remains a historical record; the later evidence is separate and immutable.
