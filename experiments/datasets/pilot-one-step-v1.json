@@ -1,0 +1,183 @@
+{
+  "dataset_id": "pilot-one-step",
+  "dataset_version": "v1",
+  "status": "APPROVED_MEMBERSHIP_ONLY",
+  "data_classification": "synthetic",
+  "approval": {
+    "recorded_date": "2026-10-19",
+    "decision": "docs/decisions.md#pilot-eval-002",
+    "evidence": "Current human seven-case table and explicit synchronization/preparation request; no execution approval."
+  },
+  "rubric_reference": "docs/evals.md: Offline AI Tutor v1 experiment; existing six named dimensions unchanged",
+  "mapping_semantics": "Coverage associations, not scores, new rubric criteria, or automatic failure judgments. All instructional judgments remain pending human review.",
+  "execution": {
+    "authorized": false,
+    "repetitions": null,
+    "final_acceptance_procedure": null,
+    "prompt_selection": null,
+    "context_rendering": null,
+    "settings": "Existing prompts, model/runtime settings, context rules and timeout are unchanged; no new run is configured."
+  },
+  "unresolved": [
+    "Clarify positive whole-number divisor versus normalized fractional coefficient terminology for approved x/4 = 6; subtraction likewise uses the positive literal 5 rather than a normalized negative constant. Do not exclude or reinterpret approved cases silently.",
+    "Approve faithful execution rendering for summary-only context in cases 5 and 7; no exact historical utterance or next assigned equation is invented.",
+    "Repetitions, execution authorization, final acceptance procedure and whether further coverage is needed remain unresolved."
+  ],
+  "cases": [
+    {
+      "id": "pilot-one-step-v1-01",
+      "name": "Addition, answer only",
+      "input": {
+        "problem_context": "x + 7 = 15",
+        "student_message": "8."
+      },
+      "review_only": {
+        "successful_tutor_behavior": "Confirm the answer without inventing their steps.",
+        "rubric_dimensions": [
+          "Mathematical correctness",
+          "Evidence discipline",
+          "Context use",
+          "Teaching usefulness"
+        ],
+        "approved_blockers": [
+          "PILOT-EVAL-001:2"
+        ],
+        "context_limitations": null,
+        "judgments": "PENDING"
+      }
+    },
+    {
+      "id": "pilot-one-step-v1-02",
+      "name": "Subtraction, explained",
+      "input": {
+        "problem_context": "x - 5 = 9",
+        "student_message": "I added 5 to both sides and got 14."
+      },
+      "review_only": {
+        "successful_tutor_behavior": "Acknowledge the correct answer and method.",
+        "rubric_dimensions": [
+          "Mathematical correctness",
+          "Evidence discipline",
+          "Context use",
+          "Teaching usefulness"
+        ],
+        "approved_blockers": [
+          "PILOT-EVAL-001:1",
+          "PILOT-EVAL-001:2"
+        ],
+        "context_limitations": null,
+        "judgments": "PENDING"
+      }
+    },
+    {
+      "id": "pilot-one-step-v1-03",
+      "name": "Division, conflicting explanation",
+      "input": {
+        "problem_context": "x/4 = 6",
+        "student_message": "24, because I divided by 4."
+      },
+      "review_only": {
+        "successful_tutor_behavior": "Distinguish the correct answer from the conflicting explanation; investigate it.",
+        "rubric_dimensions": [
+          "Mathematical correctness",
+          "Evidence discipline",
+          "Context use",
+          "Teaching usefulness"
+        ],
+        "approved_blockers": [
+          "PILOT-EVAL-001:1",
+          "PILOT-EVAL-001:2"
+        ],
+        "context_limitations": null,
+        "judgments": "PENDING"
+      }
+    },
+    {
+      "id": "pilot-one-step-v1-04",
+      "name": "Multiplication, wrong answer",
+      "input": {
+        "problem_context": "5x = 30",
+        "student_message": "25, because I subtracted 5."
+      },
+      "review_only": {
+        "successful_tutor_behavior": "Identify the incorrect result and give mathematically valid support.",
+        "rubric_dimensions": [
+          "Mathematical correctness",
+          "Evidence discipline",
+          "Context use",
+          "Teaching usefulness"
+        ],
+        "approved_blockers": [
+          "PILOT-EVAL-001:1"
+        ],
+        "context_limitations": null,
+        "judgments": "PENDING"
+      }
+    },
+    {
+      "id": "pilot-one-step-v1-05",
+      "name": "Tutor supplied the step",
+      "input": {
+        "problem_context": "x + 6 = 14; tutor previously suggested subtracting 6",
+        "student_message": "8."
+      },
+      "review_only": {
+        "successful_tutor_behavior": "Confirm without claiming the student independently selected the method.",
+        "rubric_dimensions": [
+          "Mathematical correctness",
+          "Evidence discipline",
+          "Context use",
+          "Teaching usefulness",
+          "Adaptation"
+        ],
+        "approved_blockers": [
+          "PILOT-EVAL-001:2"
+        ],
+        "context_limitations": "Prior tutor suggestion is supplied as a summary only; exact historical wording and exchange rendering are unspecified.",
+        "judgments": "PENDING"
+      }
+    },
+    {
+      "id": "pilot-one-step-v1-06",
+      "name": "Missing problem",
+      "input": {
+        "problem_context": "No identifiable equation",
+        "student_message": "I got 9."
+      },
+      "review_only": {
+        "successful_tutor_behavior": "Ask for the problem before judging the answer.",
+        "rubric_dimensions": [
+          "Evidence discipline",
+          "Context use",
+          "Teaching usefulness"
+        ],
+        "approved_blockers": [
+          "PILOT-EVAL-001:3"
+        ],
+        "context_limitations": null,
+        "judgments": "PENDING"
+      }
+    },
+    {
+      "id": "pilot-one-step-v1-07",
+      "name": "New practice request",
+      "input": {
+        "problem_context": "Existing assigned problem completed",
+        "student_message": "Give me another equation."
+      },
+      "review_only": {
+        "successful_tutor_behavior": "Redirect to another assigned problem without generating one.",
+        "rubric_dimensions": [
+          "Context use",
+          "Teaching usefulness",
+          "Coursework scope"
+        ],
+        "approved_blockers": [
+          "PILOT-EVAL-002:generated-practice"
+        ],
+        "context_limitations": "No completed equation, completion transcript, or next assigned problem is supplied. Do not invent them.",
+        "judgments": "PENDING"
+      }
+    }
+  ]
+}

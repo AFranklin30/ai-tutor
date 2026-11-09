@@ -1,0 +1,955 @@
+{
+  "record_type": "diagnostic_review",
+  "mode": "PREPARED_ONLY",
+  "purpose": "DIAGNOSTIC_NOT_ACCEPTANCE",
+  "prompt_version": "v1",
+  "dimensions": [
+    "Mathematical correctness",
+    "Evidence discipline",
+    "Context use",
+    "Teaching usefulness",
+    "Adaptation",
+    "Coursework scope"
+  ],
+  "items": [
+    {
+      "review_id": "e11edf67a77f7c2bdab7",
+      "case_id": "pilot-one-step-v1-05",
+      "sample_id": "s03",
+      "execution_position": 1,
+      "supplied_context": {
+        "grade": 7,
+        "subject": "Mathematics",
+        "authorized_problem": "x + 6 = 14",
+        "selected_history": [
+          {
+            "student": "How do I solve x + 6 = 14?",
+            "tutor": "Try subtracting 6 from both sides."
+          }
+        ],
+        "current_student_message": "8."
+      },
+      "reply": null,
+      "mechanical_status": "NOT_EXECUTED",
+      "failure_category": null,
+      "skipped_reason": "AWAITING_EXECUTION",
+      "quality_review_status": "PENDING_HUMAN_REVIEW",
+      "review": {
+        "Mathematical correctness": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Evidence discipline": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Context use": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Teaching usefulness": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Adaptation": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Coursework scope": {
+          "judgment": null,
+          "reason": ""
+        }
+      }
+    },
+    {
+      "review_id": "a0a53111f9559a6a7369",
+      "case_id": "pilot-one-step-v1-01",
+      "sample_id": "s01",
+      "execution_position": 2,
+      "supplied_context": {
+        "grade": 7,
+        "subject": "Mathematics",
+        "authorized_problem": "x + 7 = 15",
+        "selected_history": [],
+        "current_student_message": "8."
+      },
+      "reply": null,
+      "mechanical_status": "NOT_EXECUTED",
+      "failure_category": null,
+      "skipped_reason": "AWAITING_EXECUTION",
+      "quality_review_status": "PENDING_HUMAN_REVIEW",
+      "review": {
+        "Mathematical correctness": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Evidence discipline": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Context use": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Teaching usefulness": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Adaptation": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Coursework scope": {
+          "judgment": null,
+          "reason": ""
+        }
+      }
+    },
+    {
+      "review_id": "103f25641a22717f4d18",
+      "case_id": "pilot-one-step-v1-04",
+      "sample_id": "s02",
+      "execution_position": 3,
+      "supplied_context": {
+        "grade": 7,
+        "subject": "Mathematics",
+        "authorized_problem": "5x = 30",
+        "selected_history": [],
+        "current_student_message": "25, because I subtracted 5."
+      },
+      "reply": null,
+      "mechanical_status": "NOT_EXECUTED",
+      "failure_category": null,
+      "skipped_reason": "AWAITING_EXECUTION",
+      "quality_review_status": "PENDING_HUMAN_REVIEW",
+      "review": {
+        "Mathematical correctness": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Evidence discipline": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Context use": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Teaching usefulness": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Adaptation": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Coursework scope": {
+          "judgment": null,
+          "reason": ""
+        }
+      }
+    },
+    {
+      "review_id": "81575998aea53e015af4",
+      "case_id": "pilot-one-step-v1-03",
+      "sample_id": "s03",
+      "execution_position": 4,
+      "supplied_context": {
+        "grade": 7,
+        "subject": "Mathematics",
+        "authorized_problem": "x/4 = 6",
+        "selected_history": [],
+        "current_student_message": "24, because I divided by 4."
+      },
+      "reply": null,
+      "mechanical_status": "NOT_EXECUTED",
+      "failure_category": null,
+      "skipped_reason": "AWAITING_EXECUTION",
+      "quality_review_status": "PENDING_HUMAN_REVIEW",
+      "review": {
+        "Mathematical correctness": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Evidence discipline": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Context use": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Teaching usefulness": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Adaptation": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Coursework scope": {
+          "judgment": null,
+          "reason": ""
+        }
+      }
+    },
+    {
+      "review_id": "589dd2a9a23a11c605f6",
+      "case_id": "pilot-one-step-v1-07",
+      "sample_id": "s02",
+      "execution_position": 5,
+      "supplied_context": {
+        "grade": 7,
+        "subject": "Mathematics",
+        "authorized_problem": "Existing assigned problem completed",
+        "selected_history": [],
+        "current_student_message": "Give me another equation."
+      },
+      "reply": null,
+      "mechanical_status": "NOT_EXECUTED",
+      "failure_category": null,
+      "skipped_reason": "AWAITING_EXECUTION",
+      "quality_review_status": "PENDING_HUMAN_REVIEW",
+      "review": {
+        "Mathematical correctness": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Evidence discipline": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Context use": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Teaching usefulness": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Adaptation": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Coursework scope": {
+          "judgment": null,
+          "reason": ""
+        }
+      }
+    },
+    {
+      "review_id": "bc05b4894e97a8c48d17",
+      "case_id": "pilot-one-step-v1-04",
+      "sample_id": "s01",
+      "execution_position": 6,
+      "supplied_context": {
+        "grade": 7,
+        "subject": "Mathematics",
+        "authorized_problem": "5x = 30",
+        "selected_history": [],
+        "current_student_message": "25, because I subtracted 5."
+      },
+      "reply": null,
+      "mechanical_status": "NOT_EXECUTED",
+      "failure_category": null,
+      "skipped_reason": "AWAITING_EXECUTION",
+      "quality_review_status": "PENDING_HUMAN_REVIEW",
+      "review": {
+        "Mathematical correctness": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Evidence discipline": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Context use": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Teaching usefulness": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Adaptation": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Coursework scope": {
+          "judgment": null,
+          "reason": ""
+        }
+      }
+    },
+    {
+      "review_id": "998c9c7c8353aabde571",
+      "case_id": "pilot-one-step-v1-06",
+      "sample_id": "s01",
+      "execution_position": 7,
+      "supplied_context": {
+        "grade": 7,
+        "subject": "Mathematics",
+        "authorized_problem": null,
+        "selected_history": [],
+        "current_student_message": "I got 9."
+      },
+      "reply": null,
+      "mechanical_status": "NOT_EXECUTED",
+      "failure_category": null,
+      "skipped_reason": "AWAITING_EXECUTION",
+      "quality_review_status": "PENDING_HUMAN_REVIEW",
+      "review": {
+        "Mathematical correctness": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Evidence discipline": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Context use": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Teaching usefulness": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Adaptation": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Coursework scope": {
+          "judgment": null,
+          "reason": ""
+        }
+      }
+    },
+    {
+      "review_id": "7a43ed1da763336e41d2",
+      "case_id": "pilot-one-step-v1-07",
+      "sample_id": "s03",
+      "execution_position": 8,
+      "supplied_context": {
+        "grade": 7,
+        "subject": "Mathematics",
+        "authorized_problem": "Existing assigned problem completed",
+        "selected_history": [],
+        "current_student_message": "Give me another equation."
+      },
+      "reply": null,
+      "mechanical_status": "NOT_EXECUTED",
+      "failure_category": null,
+      "skipped_reason": "AWAITING_EXECUTION",
+      "quality_review_status": "PENDING_HUMAN_REVIEW",
+      "review": {
+        "Mathematical correctness": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Evidence discipline": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Context use": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Teaching usefulness": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Adaptation": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Coursework scope": {
+          "judgment": null,
+          "reason": ""
+        }
+      }
+    },
+    {
+      "review_id": "400c70975e9a92be1cd7",
+      "case_id": "pilot-one-step-v1-01",
+      "sample_id": "s02",
+      "execution_position": 9,
+      "supplied_context": {
+        "grade": 7,
+        "subject": "Mathematics",
+        "authorized_problem": "x + 7 = 15",
+        "selected_history": [],
+        "current_student_message": "8."
+      },
+      "reply": null,
+      "mechanical_status": "NOT_EXECUTED",
+      "failure_category": null,
+      "skipped_reason": "AWAITING_EXECUTION",
+      "quality_review_status": "PENDING_HUMAN_REVIEW",
+      "review": {
+        "Mathematical correctness": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Evidence discipline": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Context use": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Teaching usefulness": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Adaptation": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Coursework scope": {
+          "judgment": null,
+          "reason": ""
+        }
+      }
+    },
+    {
+      "review_id": "8500d3da646bcae2edb8",
+      "case_id": "pilot-one-step-v1-02",
+      "sample_id": "s02",
+      "execution_position": 10,
+      "supplied_context": {
+        "grade": 7,
+        "subject": "Mathematics",
+        "authorized_problem": "x - 5 = 9",
+        "selected_history": [],
+        "current_student_message": "I added 5 to both sides and got 14."
+      },
+      "reply": null,
+      "mechanical_status": "NOT_EXECUTED",
+      "failure_category": null,
+      "skipped_reason": "AWAITING_EXECUTION",
+      "quality_review_status": "PENDING_HUMAN_REVIEW",
+      "review": {
+        "Mathematical correctness": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Evidence discipline": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Context use": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Teaching usefulness": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Adaptation": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Coursework scope": {
+          "judgment": null,
+          "reason": ""
+        }
+      }
+    },
+    {
+      "review_id": "45dabb05e7bc24bfa954",
+      "case_id": "pilot-one-step-v1-06",
+      "sample_id": "s03",
+      "execution_position": 11,
+      "supplied_context": {
+        "grade": 7,
+        "subject": "Mathematics",
+        "authorized_problem": null,
+        "selected_history": [],
+        "current_student_message": "I got 9."
+      },
+      "reply": null,
+      "mechanical_status": "NOT_EXECUTED",
+      "failure_category": null,
+      "skipped_reason": "AWAITING_EXECUTION",
+      "quality_review_status": "PENDING_HUMAN_REVIEW",
+      "review": {
+        "Mathematical correctness": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Evidence discipline": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Context use": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Teaching usefulness": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Adaptation": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Coursework scope": {
+          "judgment": null,
+          "reason": ""
+        }
+      }
+    },
+    {
+      "review_id": "fbe116d659e30e471f48",
+      "case_id": "pilot-one-step-v1-02",
+      "sample_id": "s03",
+      "execution_position": 12,
+      "supplied_context": {
+        "grade": 7,
+        "subject": "Mathematics",
+        "authorized_problem": "x - 5 = 9",
+        "selected_history": [],
+        "current_student_message": "I added 5 to both sides and got 14."
+      },
+      "reply": null,
+      "mechanical_status": "NOT_EXECUTED",
+      "failure_category": null,
+      "skipped_reason": "AWAITING_EXECUTION",
+      "quality_review_status": "PENDING_HUMAN_REVIEW",
+      "review": {
+        "Mathematical correctness": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Evidence discipline": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Context use": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Teaching usefulness": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Adaptation": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Coursework scope": {
+          "judgment": null,
+          "reason": ""
+        }
+      }
+    },
+    {
+      "review_id": "8bddffbc0adacbb3ca44",
+      "case_id": "pilot-one-step-v1-07",
+      "sample_id": "s01",
+      "execution_position": 13,
+      "supplied_context": {
+        "grade": 7,
+        "subject": "Mathematics",
+        "authorized_problem": "Existing assigned problem completed",
+        "selected_history": [],
+        "current_student_message": "Give me another equation."
+      },
+      "reply": null,
+      "mechanical_status": "NOT_EXECUTED",
+      "failure_category": null,
+      "skipped_reason": "AWAITING_EXECUTION",
+      "quality_review_status": "PENDING_HUMAN_REVIEW",
+      "review": {
+        "Mathematical correctness": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Evidence discipline": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Context use": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Teaching usefulness": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Adaptation": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Coursework scope": {
+          "judgment": null,
+          "reason": ""
+        }
+      }
+    },
+    {
+      "review_id": "f2e1273dd80c121b3a66",
+      "case_id": "pilot-one-step-v1-05",
+      "sample_id": "s02",
+      "execution_position": 14,
+      "supplied_context": {
+        "grade": 7,
+        "subject": "Mathematics",
+        "authorized_problem": "x + 6 = 14",
+        "selected_history": [
+          {
+            "student": "How do I solve x + 6 = 14?",
+            "tutor": "Try subtracting 6 from both sides."
+          }
+        ],
+        "current_student_message": "8."
+      },
+      "reply": null,
+      "mechanical_status": "NOT_EXECUTED",
+      "failure_category": null,
+      "skipped_reason": "AWAITING_EXECUTION",
+      "quality_review_status": "PENDING_HUMAN_REVIEW",
+      "review": {
+        "Mathematical correctness": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Evidence discipline": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Context use": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Teaching usefulness": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Adaptation": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Coursework scope": {
+          "judgment": null,
+          "reason": ""
+        }
+      }
+    },
+    {
+      "review_id": "3bf8b47dcef6474199f6",
+      "case_id": "pilot-one-step-v1-06",
+      "sample_id": "s02",
+      "execution_position": 15,
+      "supplied_context": {
+        "grade": 7,
+        "subject": "Mathematics",
+        "authorized_problem": null,
+        "selected_history": [],
+        "current_student_message": "I got 9."
+      },
+      "reply": null,
+      "mechanical_status": "NOT_EXECUTED",
+      "failure_category": null,
+      "skipped_reason": "AWAITING_EXECUTION",
+      "quality_review_status": "PENDING_HUMAN_REVIEW",
+      "review": {
+        "Mathematical correctness": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Evidence discipline": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Context use": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Teaching usefulness": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Adaptation": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Coursework scope": {
+          "judgment": null,
+          "reason": ""
+        }
+      }
+    },
+    {
+      "review_id": "badeba3e9e56815a3bb5",
+      "case_id": "pilot-one-step-v1-04",
+      "sample_id": "s03",
+      "execution_position": 16,
+      "supplied_context": {
+        "grade": 7,
+        "subject": "Mathematics",
+        "authorized_problem": "5x = 30",
+        "selected_history": [],
+        "current_student_message": "25, because I subtracted 5."
+      },
+      "reply": null,
+      "mechanical_status": "NOT_EXECUTED",
+      "failure_category": null,
+      "skipped_reason": "AWAITING_EXECUTION",
+      "quality_review_status": "PENDING_HUMAN_REVIEW",
+      "review": {
+        "Mathematical correctness": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Evidence discipline": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Context use": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Teaching usefulness": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Adaptation": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Coursework scope": {
+          "judgment": null,
+          "reason": ""
+        }
+      }
+    },
+    {
+      "review_id": "4cf4333be3c81423bac6",
+      "case_id": "pilot-one-step-v1-03",
+      "sample_id": "s02",
+      "execution_position": 17,
+      "supplied_context": {
+        "grade": 7,
+        "subject": "Mathematics",
+        "authorized_problem": "x/4 = 6",
+        "selected_history": [],
+        "current_student_message": "24, because I divided by 4."
+      },
+      "reply": null,
+      "mechanical_status": "NOT_EXECUTED",
+      "failure_category": null,
+      "skipped_reason": "AWAITING_EXECUTION",
+      "quality_review_status": "PENDING_HUMAN_REVIEW",
+      "review": {
+        "Mathematical correctness": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Evidence discipline": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Context use": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Teaching usefulness": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Adaptation": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Coursework scope": {
+          "judgment": null,
+          "reason": ""
+        }
+      }
+    },
+    {
+      "review_id": "40160c0094ed304c06a1",
+      "case_id": "pilot-one-step-v1-02",
+      "sample_id": "s01",
+      "execution_position": 18,
+      "supplied_context": {
+        "grade": 7,
+        "subject": "Mathematics",
+        "authorized_problem": "x - 5 = 9",
+        "selected_history": [],
+        "current_student_message": "I added 5 to both sides and got 14."
+      },
+      "reply": null,
+      "mechanical_status": "NOT_EXECUTED",
+      "failure_category": null,
+      "skipped_reason": "AWAITING_EXECUTION",
+      "quality_review_status": "PENDING_HUMAN_REVIEW",
+      "review": {
+        "Mathematical correctness": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Evidence discipline": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Context use": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Teaching usefulness": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Adaptation": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Coursework scope": {
+          "judgment": null,
+          "reason": ""
+        }
+      }
+    },
+    {
+      "review_id": "7c5b7fee41bd51abd9e3",
+      "case_id": "pilot-one-step-v1-03",
+      "sample_id": "s01",
+      "execution_position": 19,
+      "supplied_context": {
+        "grade": 7,
+        "subject": "Mathematics",
+        "authorized_problem": "x/4 = 6",
+        "selected_history": [],
+        "current_student_message": "24, because I divided by 4."
+      },
+      "reply": null,
+      "mechanical_status": "NOT_EXECUTED",
+      "failure_category": null,
+      "skipped_reason": "AWAITING_EXECUTION",
+      "quality_review_status": "PENDING_HUMAN_REVIEW",
+      "review": {
+        "Mathematical correctness": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Evidence discipline": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Context use": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Teaching usefulness": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Adaptation": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Coursework scope": {
+          "judgment": null,
+          "reason": ""
+        }
+      }
+    },
+    {
+      "review_id": "a7170072ba3d831f0617",
+      "case_id": "pilot-one-step-v1-01",
+      "sample_id": "s03",
+      "execution_position": 20,
+      "supplied_context": {
+        "grade": 7,
+        "subject": "Mathematics",
+        "authorized_problem": "x + 7 = 15",
+        "selected_history": [],
+        "current_student_message": "8."
+      },
+      "reply": null,
+      "mechanical_status": "NOT_EXECUTED",
+      "failure_category": null,
+      "skipped_reason": "AWAITING_EXECUTION",
+      "quality_review_status": "PENDING_HUMAN_REVIEW",
+      "review": {
+        "Mathematical correctness": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Evidence discipline": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Context use": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Teaching usefulness": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Adaptation": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Coursework scope": {
+          "judgment": null,
+          "reason": ""
+        }
+      }
+    },
+    {
+      "review_id": "ff00a4298cd53402d24f",
+      "case_id": "pilot-one-step-v1-05",
+      "sample_id": "s01",
+      "execution_position": 21,
+      "supplied_context": {
+        "grade": 7,
+        "subject": "Mathematics",
+        "authorized_problem": "x + 6 = 14",
+        "selected_history": [
+          {
+            "student": "How do I solve x + 6 = 14?",
+            "tutor": "Try subtracting 6 from both sides."
+          }
+        ],
+        "current_student_message": "8."
+      },
+      "reply": null,
+      "mechanical_status": "NOT_EXECUTED",
+      "failure_category": null,
+      "skipped_reason": "AWAITING_EXECUTION",
+      "quality_review_status": "PENDING_HUMAN_REVIEW",
+      "review": {
+        "Mathematical correctness": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Evidence discipline": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Context use": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Teaching usefulness": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Adaptation": {
+          "judgment": null,
+          "reason": ""
+        },
+        "Coursework scope": {
+          "judgment": null,
+          "reason": ""
+        }
+      }
+    }
+  ]
+}
