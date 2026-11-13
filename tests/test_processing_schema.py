@@ -580,7 +580,9 @@ def test_populated_downgrade_is_rejected_without_losing_history(seeded):
     with pytest.raises(DBAPIError, match="requires empty message history"):
         migrate(seeded.db, "0001", downgrade=True)
     with seeded.db.connect() as c:
-        assert c.scalar(text("SELECT version_num FROM alembic_version")) == "0002"
+        # The attempted 0001 downgrade begins at the current repository head. The
+        # 0002 message-history guard aborts the transaction, restoring head 0003.
+        assert c.scalar(text("SELECT version_num FROM alembic_version")) == "0003"
         assert job(c, mid)["message_id"] == mid
 
 

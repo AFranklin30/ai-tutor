@@ -172,24 +172,56 @@ Constraint:
 
 ### learning_objectives
 
-Represents a curriculum learning objective or skill.
+Represents a stable logical, reusable learning objective. An objective may
+be system-owned or organization-owned and exists independently of any course.
+Its content is versioned immutably; a change creates a new version and does
+not rewrite the definition used by historical evidence or instructional
+records.
 
 Conceptual fields:
 
 -   `id` --- primary key
--   `course_id` --- FK to `courses.id`
+-   owner kind (`SYSTEM` or `ORGANIZATION`)
+-   optional `organization_id` --- required for organization-owned objectives
 -   `code` --- curriculum/objective identifier where available
+-   current objective-version reference
+-   `created_at`
+
+### learning_objective_versions
+
+Stores immutable, numbered versions of a logical learning objective.
+
+Conceptual fields include:
+
+-   `id` --- primary key
+-   `learning_objective_id` --- FK to stable objective identity
+-   `version`
 -   `title`
 -   `description`
 -   `created_at`
--   `updated_at`
 
-Learning objectives belong to a course and may appear in multiple
-lessons or problems.
+Recommended uniqueness: (`learning_objective_id`, `version`). Version
+content is never edited in place. Exact current-version enforcement follows the approved Stage 3 DATA architecture blueprint; implementation must use its same-identity version reference and concurrency rules.
+
+### course_learning_objectives
+
+Many-to-many relationship between courses and stable learning objectives.
+Course association is optional; an objective can exist without a course and
+can be reused across multiple courses. This relationship does not make a
+course the owner of the objective.
+
+Conceptual fields:
+
+-   `course_id` --- FK to `courses.id`
+-   `learning_objective_id` --- FK to stable objective identity
+-   provenance/creation time as required by the approved curriculum contract
+
+Recommended uniqueness: (`course_id`, `learning_objective_id`).
 
 ### lesson_learning_objectives
 
-Junction table between lessons and learning objectives.
+Junction table between lessons and learning objectives. It is separate from
+course association and does not imply objective ownership by the course.
 
 Conceptual fields:
 
@@ -1156,3 +1188,17 @@ Schema changes should use Alembic migrations and follow the repository's
 `schema-change` skill.
 
 No application code or migration should silently redefine this contract.
+
+------------------------------------------------------------------------
+
+## 34. Stage 3 organization and curriculum architecture
+
+**Status:** Approved target architecture; Migration 0003 is authored and verified against disposable PostgreSQL, but has not been applied to a non-disposable database. See [Stage 3 DATA implementation blueprint](stage-3-data-implementation-blueprint.md). Tenant-aware application authorization and later learning-record tables remain unimplemented.
+
+Organizations own reusable curriculum; tenants are separate workspace/security boundaries, with one organization able to own multiple tenants. Global users may have memberships in multiple organizations and tenants. Tenant roles, organization roles, and organization curriculum permissions are distinct. Tenant membership or tenant administration does not imply permission to edit organization curriculum, and organization curriculum permission does not grant tenant student-data access. No implicit cross-tenant or hierarchy inheritance is allowed.
+
+Curriculum libraries may be system-owned, personal (owned by a global user), or organization-owned. Existing physical `courses` remain operational tenant offerings. Reusable `curriculum_courses`, units, and lessons live under curriculum libraries. Shared curriculum is adopted by reference to an exact immutable source record/version. Intentional organization customization creates an immutable organization-owned derivative with exact source provenance. Objectives remain reusable logical identities with immutable versions and optional many-to-many course associations; course ownership is not required on an objective.
+
+Cross-organization evidence contributions are explicit and scoped; the originating tenant/student retain ownership. A contribution does not grant general access to student records. Evidence source identity is distinct from immutable source snapshots/versions. Interpretations preserve original creator attribution; corrections are new linked records and do not overwrite the original. Human review is separately attributed. Learning-state history is immutable, versioned, and linked to authorized evidence/review/import provenance. AI-generated evidence or interpretation alone cannot change authoritative learning state. These are data-authority distinctions; learning state is not official mastery.
+
+Migration 0003 creates organizations, tenants, tenant and organization memberships/roles, organization curriculum permissions, libraries, reusable curriculum courses, units, lessons, and typed adoption/derivation support. It was verified against a disposable PostgreSQL 14.19 database, including metadata parity, fresh upgrade/downgrade, populated-0002 preservation, and the requested message-processing regressions. It preserves existing message admission, idempotency, sessions, jobs, and worker recovery. Tenant backfill and enforcement on existing coursework/messages require a separate reviewed mapping and tenant-aware application code; no legacy rows may be assigned to invented tenants. Role/capability fields currently store opaque non-empty codes with no seeded values or authorization semantics; recover the approved vocabulary before using grants. For these Stage 3 tables, RESTRICT deletion and immutable provenance take precedence over the general unresolved cascade policy in §32.

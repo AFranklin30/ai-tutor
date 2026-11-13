@@ -86,8 +86,11 @@ No model provider, worker framework, or deployment platform is implemented here.
 - [Security](docs/security.md), [AI runtime](docs/ai-runtime.md), and
   [tests/evals](docs/evals.md) cover their respective boundaries.
 - [Approved decisions](docs/decisions.md) remains the approval log.
-- [Architecture decision records](docs/architecture-decisions.md) explain the implemented
-  choices and distinguish them from proposed future mechanisms.
+- [Architecture decision records](docs/architecture-decisions.md) explain implemented
+  choices and approved target boundaries.
+- [Stage 3 DATA blueprint](docs/stage-3-data-implementation-blueprint.md) records the
+  approved organization/curriculum architecture and Migration 0003, verified against
+  disposable PostgreSQL. Tenant-aware runtime authorization remains pending.
 - [Slice 1 handoff](SLICE1_HANDOFF.md) records the code boundaries and original verification.
 
 `main` is the stable Slice 1 baseline. Subsequent Slice 2 work belongs on

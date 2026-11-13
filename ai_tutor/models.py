@@ -30,8 +30,8 @@ metadata = MetaData(
 )
 
 
-def identifier(name="id", target=None, primary_key=False):
-    args = [ForeignKey(target)] if target else []
+def identifier(name="id", target=None, primary_key=False, ondelete=None):
+    args = [ForeignKey(target, ondelete=ondelete)] if target else []
     return Column(name, UUID(as_uuid=True), *args, primary_key=primary_key, nullable=False)
 
 
@@ -49,6 +49,381 @@ users = Table(
     created(),
     CheckConstraint("role IN ('STUDENT', 'TEACHER')", name="role"),
 )
+
+organizations = Table(
+    "organizations",
+    metadata,
+    identifier(primary_key=True),
+    Column("name", Text, nullable=False),
+    Column("is_active", Boolean, nullable=False, server_default="true"),
+    created(),
+    CheckConstraint("length(name) > 0", name="name_nonempty"),
+)
+tenants = Table(
+    "tenants",
+    metadata,
+    identifier(primary_key=True),
+    identifier("organization_id", "organizations.id", ondelete="RESTRICT"),
+    Column("name", Text, nullable=False),
+    Column("is_active", Boolean, nullable=False, server_default="true"),
+    created(),
+    UniqueConstraint("organization_id", "id", name="uq_tenants_organization_id"),
+    CheckConstraint("length(name) > 0", name="name_nonempty"),
+)
+Index("ix_tenants_organization", tenants.c.organization_id)
+tenant_memberships = Table(
+    "tenant_memberships",
+    metadata,
+    identifier(primary_key=True),
+    identifier("tenant_id", "tenants.id", ondelete="RESTRICT"),
+    identifier("user_id", "users.id", ondelete="RESTRICT"),
+    identifier("created_by_user_id", "users.id", ondelete="RESTRICT"),
+    Column("activated_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
+    Column("deactivated_at", DateTime(timezone=True)),
+    created(),
+    UniqueConstraint("tenant_id", "id", name="uq_tenant_memberships_tenant_id"),
+    UniqueConstraint("tenant_id", "id", "user_id", name="uq_tenant_memberships_tenant_id_user"),
+    CheckConstraint(
+        "deactivated_at IS NULL OR deactivated_at >= activated_at", name="membership_dates"
+    ),
+)
+Index(
+    "uq_tenant_memberships_active",
+    tenant_memberships.c.tenant_id,
+    tenant_memberships.c.user_id,
+    unique=True,
+    postgresql_where=tenant_memberships.c.deactivated_at.is_(None),
+)
+Index("ix_tenant_memberships_user", tenant_memberships.c.user_id, tenant_memberships.c.tenant_id)
+tenant_membership_roles = Table(
+    "tenant_membership_roles",
+    metadata,
+    identifier(primary_key=True),
+    identifier("tenant_id", "tenants.id", ondelete="RESTRICT"),
+    identifier("tenant_membership_id"),
+    Column("role_code", Text, nullable=False),
+    identifier("granted_by_user_id", "users.id", ondelete="RESTRICT"),
+    Column("granted_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
+    Column("revoked_at", DateTime(timezone=True)),
+    UniqueConstraint("tenant_id", "id", name="uq_tenant_membership_roles_scope"),
+    ForeignKeyConstraint(
+        ["tenant_id", "tenant_membership_id"],
+        ["tenant_memberships.tenant_id", "tenant_memberships.id"],
+        name="fk_tenant_membership_roles_membership_scope",
+        ondelete="RESTRICT",
+    ),
+    CheckConstraint("length(role_code) > 0", name="role_code_nonempty"),
+    CheckConstraint("revoked_at IS NULL OR revoked_at >= granted_at", name="role_dates"),
+)
+Index(
+    "uq_tenant_membership_roles_active",
+    tenant_membership_roles.c.tenant_membership_id,
+    tenant_membership_roles.c.role_code,
+    unique=True,
+    postgresql_where=tenant_membership_roles.c.revoked_at.is_(None),
+)
+Index(
+    "ix_tenant_membership_roles_scope",
+    tenant_membership_roles.c.tenant_id,
+    tenant_membership_roles.c.tenant_membership_id,
+)
+organization_memberships = Table(
+    "organization_memberships",
+    metadata,
+    identifier(primary_key=True),
+    identifier("organization_id", "organizations.id", ondelete="RESTRICT"),
+    identifier("user_id", "users.id", ondelete="RESTRICT"),
+    identifier("created_by_user_id", "users.id", ondelete="RESTRICT"),
+    Column("activated_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
+    Column("deactivated_at", DateTime(timezone=True)),
+    created(),
+    UniqueConstraint("organization_id", "id", name="uq_organization_memberships_scope"),
+    CheckConstraint(
+        "deactivated_at IS NULL OR deactivated_at >= activated_at", name="membership_dates"
+    ),
+)
+Index(
+    "uq_organization_memberships_active",
+    organization_memberships.c.organization_id,
+    organization_memberships.c.user_id,
+    unique=True,
+    postgresql_where=organization_memberships.c.deactivated_at.is_(None),
+)
+Index(
+    "ix_organization_memberships_user",
+    organization_memberships.c.user_id,
+    organization_memberships.c.organization_id,
+)
+organization_membership_roles = Table(
+    "organization_membership_roles",
+    metadata,
+    identifier(primary_key=True),
+    identifier("organization_id", "organizations.id", ondelete="RESTRICT"),
+    identifier("organization_membership_id"),
+    Column("role_code", Text, nullable=False),
+    identifier("granted_by_user_id", "users.id", ondelete="RESTRICT"),
+    Column("granted_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
+    Column("revoked_at", DateTime(timezone=True)),
+    UniqueConstraint("organization_id", "id", name="uq_organization_membership_roles_scope"),
+    ForeignKeyConstraint(
+        ["organization_id", "organization_membership_id"],
+        ["organization_memberships.organization_id", "organization_memberships.id"],
+        name="fk_organization_membership_roles_membership_scope",
+        ondelete="RESTRICT",
+    ),
+    CheckConstraint("length(role_code) > 0", name="role_code_nonempty"),
+    CheckConstraint("revoked_at IS NULL OR revoked_at >= granted_at", name="role_dates"),
+)
+Index(
+    "uq_organization_membership_roles_active",
+    organization_membership_roles.c.organization_membership_id,
+    organization_membership_roles.c.role_code,
+    unique=True,
+    postgresql_where=organization_membership_roles.c.revoked_at.is_(None),
+)
+Index(
+    "ix_organization_membership_roles_scope",
+    organization_membership_roles.c.organization_id,
+    organization_membership_roles.c.organization_membership_id,
+)
+organization_curriculum_permissions = Table(
+    "organization_curriculum_permissions",
+    metadata,
+    identifier(primary_key=True),
+    identifier("organization_id", "organizations.id", ondelete="RESTRICT"),
+    identifier("organization_membership_id"),
+    Column("capability_code", Text, nullable=False),
+    identifier("granted_by_user_id", "users.id", ondelete="RESTRICT"),
+    Column("granted_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
+    Column("revoked_at", DateTime(timezone=True)),
+    ForeignKeyConstraint(
+        ["organization_id", "organization_membership_id"],
+        ["organization_memberships.organization_id", "organization_memberships.id"],
+        name="fk_organization_curriculum_permissions_membership_scope",
+        ondelete="RESTRICT",
+    ),
+    CheckConstraint("length(capability_code) > 0", name="capability_code_nonempty"),
+    CheckConstraint("revoked_at IS NULL OR revoked_at >= granted_at", name="permission_dates"),
+)
+Index(
+    "uq_organization_curriculum_permissions_active",
+    organization_curriculum_permissions.c.organization_membership_id,
+    organization_curriculum_permissions.c.capability_code,
+    unique=True,
+    postgresql_where=organization_curriculum_permissions.c.revoked_at.is_(None),
+)
+Index(
+    "ix_organization_curriculum_permissions_scope",
+    organization_curriculum_permissions.c.organization_id,
+    organization_curriculum_permissions.c.organization_membership_id,
+)
+curriculum_libraries = Table(
+    "curriculum_libraries",
+    metadata,
+    identifier(primary_key=True),
+    Column("owner_kind", String(16), nullable=False),
+    Column("owner_user_id", UUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT")),
+    Column(
+        "owner_organization_id",
+        UUID(as_uuid=True),
+        ForeignKey("organizations.id", ondelete="RESTRICT"),
+    ),
+    Column("name", Text, nullable=False),
+    created(),
+    UniqueConstraint("owner_organization_id", "id", name="uq_curriculum_libraries_org_id"),
+    CheckConstraint(
+        "(owner_kind = 'SYSTEM' AND owner_user_id IS NULL AND owner_organization_id IS NULL) OR "
+        "(owner_kind = 'PERSONAL' AND owner_user_id IS NOT NULL AND "
+        "owner_organization_id IS NULL) OR "
+        "(owner_kind = 'ORGANIZATION' AND owner_user_id IS NULL AND "
+        "owner_organization_id IS NOT NULL)",
+        name="owner_shape",
+    ),
+    CheckConstraint("length(name) > 0", name="name_nonempty"),
+)
+curriculum_courses = Table(
+    "curriculum_courses",
+    metadata,
+    identifier(primary_key=True),
+    identifier("library_id", "curriculum_libraries.id", ondelete="RESTRICT"),
+    Column("title", Text, nullable=False),
+    Column("description", Text, nullable=False),
+    Column("subject", Text, nullable=False),
+    Column("grade_level", Integer, nullable=False),
+    identifier("created_by_user_id", "users.id", ondelete="RESTRICT"),
+    created(),
+    UniqueConstraint("library_id", "id", name="uq_curriculum_courses_library_id"),
+    CheckConstraint("length(title) > 0", name="title_nonempty"),
+    CheckConstraint("length(subject) > 0", name="subject_nonempty"),
+)
+Index("ix_curriculum_courses_library", curriculum_courses.c.library_id)
+curriculum_units = Table(
+    "curriculum_units",
+    metadata,
+    identifier(primary_key=True),
+    identifier("curriculum_course_id"),
+    Column("title", Text, nullable=False),
+    Column("description", Text, nullable=False),
+    Column("sequence_order", Integer, nullable=False),
+    identifier("created_by_user_id", "users.id", ondelete="RESTRICT"),
+    created(),
+    UniqueConstraint("curriculum_course_id", "id", name="uq_curriculum_units_course_id"),
+    UniqueConstraint(
+        "curriculum_course_id", "sequence_order", name="uq_curriculum_units_course_order"
+    ),
+    ForeignKeyConstraint(["curriculum_course_id"], ["curriculum_courses.id"], ondelete="RESTRICT"),
+    CheckConstraint("length(title) > 0", name="title_nonempty"),
+    CheckConstraint("sequence_order > 0", name="sequence_order_positive"),
+)
+Index("ix_curriculum_units_course", curriculum_units.c.curriculum_course_id)
+curriculum_lessons = Table(
+    "curriculum_lessons",
+    metadata,
+    identifier(primary_key=True),
+    identifier("curriculum_unit_id"),
+    Column("title", Text, nullable=False),
+    Column("content", Text, nullable=False),
+    Column("sequence_order", Integer, nullable=False),
+    identifier("created_by_user_id", "users.id", ondelete="RESTRICT"),
+    created(),
+    UniqueConstraint("curriculum_unit_id", "id", name="uq_curriculum_lessons_unit_id"),
+    UniqueConstraint(
+        "curriculum_unit_id", "sequence_order", name="uq_curriculum_lessons_unit_order"
+    ),
+    ForeignKeyConstraint(["curriculum_unit_id"], ["curriculum_units.id"], ondelete="RESTRICT"),
+    CheckConstraint("length(title) > 0", name="title_nonempty"),
+    CheckConstraint("sequence_order > 0", name="sequence_order_positive"),
+)
+Index("ix_curriculum_lessons_unit", curriculum_lessons.c.curriculum_unit_id)
+tenant_curriculum_course_adoptions = Table(
+    "tenant_curriculum_course_adoptions",
+    metadata,
+    identifier(primary_key=True),
+    identifier("tenant_id", "tenants.id", ondelete="RESTRICT"),
+    identifier("source_library_id"),
+    identifier("curriculum_course_id"),
+    identifier("adopted_by_user_id", "users.id", ondelete="RESTRICT"),
+    Column("adopted_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
+    Column("retired_by_user_id", UUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT")),
+    Column("retired_at", DateTime(timezone=True)),
+    UniqueConstraint("tenant_id", "id", name="uq_tenant_course_adoptions_tenant_id"),
+    ForeignKeyConstraint(
+        ["source_library_id", "curriculum_course_id"],
+        ["curriculum_courses.library_id", "curriculum_courses.id"],
+        name="fk_tenant_course_adoptions_source_course",
+        ondelete="RESTRICT",
+    ),
+    CheckConstraint(
+        "(retired_at IS NULL) = (retired_by_user_id IS NULL)", name="retirement_actor_pair"
+    ),
+    CheckConstraint("retired_at IS NULL OR retired_at >= adopted_at", name="adoption_dates"),
+)
+Index(
+    "uq_tenant_curriculum_course_adoptions_active",
+    tenant_curriculum_course_adoptions.c.tenant_id,
+    tenant_curriculum_course_adoptions.c.curriculum_course_id,
+    unique=True,
+    postgresql_where=tenant_curriculum_course_adoptions.c.retired_at.is_(None),
+)
+Index(
+    "ix_tenant_curriculum_course_adoptions_tenant_source",
+    tenant_curriculum_course_adoptions.c.tenant_id,
+    tenant_curriculum_course_adoptions.c.curriculum_course_id,
+)
+curriculum_course_derivations = Table(
+    "curriculum_course_derivations",
+    metadata,
+    identifier(primary_key=True),
+    identifier("target_organization_id"),
+    identifier("target_library_id"),
+    identifier("target_course_id"),
+    identifier("source_library_id"),
+    identifier("source_course_id"),
+    identifier("derived_by_user_id", "users.id", ondelete="RESTRICT"),
+    created(),
+    UniqueConstraint("target_course_id", name="uq_course_derivations_target"),
+    ForeignKeyConstraint(
+        ["target_organization_id", "target_library_id"],
+        ["curriculum_libraries.owner_organization_id", "curriculum_libraries.id"],
+        name="fk_course_derivations_target_org_library",
+        ondelete="RESTRICT",
+    ),
+    ForeignKeyConstraint(
+        ["target_library_id", "target_course_id"],
+        ["curriculum_courses.library_id", "curriculum_courses.id"],
+        name="fk_course_derivations_target_course",
+        ondelete="RESTRICT",
+    ),
+    ForeignKeyConstraint(
+        ["source_library_id", "source_course_id"],
+        ["curriculum_courses.library_id", "curriculum_courses.id"],
+        name="fk_course_derivations_source_course",
+        ondelete="RESTRICT",
+    ),
+    CheckConstraint(
+        "(target_library_id, target_course_id) <> (source_library_id, source_course_id)",
+        name="source_differs_from_target",
+    ),
+)
+curriculum_unit_derivations = Table(
+    "curriculum_unit_derivations",
+    metadata,
+    identifier(primary_key=True),
+    identifier("target_course_id"),
+    identifier("target_unit_id"),
+    identifier("source_course_id"),
+    identifier("source_unit_id"),
+    identifier("derived_by_user_id", "users.id", ondelete="RESTRICT"),
+    created(),
+    UniqueConstraint("target_unit_id", name="uq_unit_derivations_target"),
+    ForeignKeyConstraint(
+        ["target_course_id", "target_unit_id"],
+        ["curriculum_units.curriculum_course_id", "curriculum_units.id"],
+        name="fk_unit_derivations_target_unit",
+        ondelete="RESTRICT",
+    ),
+    ForeignKeyConstraint(
+        ["source_course_id", "source_unit_id"],
+        ["curriculum_units.curriculum_course_id", "curriculum_units.id"],
+        name="fk_unit_derivations_source_unit",
+        ondelete="RESTRICT",
+    ),
+    CheckConstraint(
+        "(target_course_id, target_unit_id) <> (source_course_id, source_unit_id)",
+        name="source_differs_from_target",
+    ),
+)
+Index("ix_curriculum_unit_derivations_source", curriculum_unit_derivations.c.source_unit_id)
+curriculum_lesson_derivations = Table(
+    "curriculum_lesson_derivations",
+    metadata,
+    identifier(primary_key=True),
+    identifier("target_unit_id"),
+    identifier("target_lesson_id"),
+    identifier("source_unit_id"),
+    identifier("source_lesson_id"),
+    identifier("derived_by_user_id", "users.id", ondelete="RESTRICT"),
+    created(),
+    UniqueConstraint("target_lesson_id", name="uq_lesson_derivations_target"),
+    ForeignKeyConstraint(
+        ["target_unit_id", "target_lesson_id"],
+        ["curriculum_lessons.curriculum_unit_id", "curriculum_lessons.id"],
+        name="fk_lesson_derivations_target_lesson",
+        ondelete="RESTRICT",
+    ),
+    ForeignKeyConstraint(
+        ["source_unit_id", "source_lesson_id"],
+        ["curriculum_lessons.curriculum_unit_id", "curriculum_lessons.id"],
+        name="fk_lesson_derivations_source_lesson",
+        ondelete="RESTRICT",
+    ),
+    CheckConstraint(
+        "(target_unit_id, target_lesson_id) <> (source_unit_id, source_lesson_id)",
+        name="source_differs_from_target",
+    ),
+)
+Index("ix_curriculum_lesson_derivations_source", curriculum_lesson_derivations.c.source_lesson_id)
+
 courses = Table(
     "courses",
     metadata,
@@ -56,8 +431,23 @@ courses = Table(
     Column("name", Text, nullable=False),
     Column("grade_level", Integer, nullable=False),
     Column("subject", Text, nullable=False),
+    Column("tenant_id", UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="RESTRICT")),
+    Column("curriculum_course_adoption_id", UUID(as_uuid=True)),
     created(),
+    CheckConstraint(
+        "(tenant_id IS NULL AND curriculum_course_adoption_id IS NULL) OR "
+        "(tenant_id IS NOT NULL AND curriculum_course_adoption_id IS NOT NULL)",
+        name="tenant_adoption_pair",
+    ),
+    ForeignKeyConstraint(
+        ["tenant_id", "curriculum_course_adoption_id"],
+        ["tenant_curriculum_course_adoptions.tenant_id", "tenant_curriculum_course_adoptions.id"],
+        name="fk_courses_tenant_adoption",
+        ondelete="RESTRICT",
+    ),
 )
+Index("ix_courses_tenant", courses.c.tenant_id)
+Index("ix_courses_curriculum_adoption", courses.c.curriculum_course_adoption_id)
 enrollments = Table(
     "enrollments",
     metadata,
